@@ -315,7 +315,7 @@
 
     // Function to filter movies based on user input
     function filterMovies() {
-        const titleFilter = document.getElementById('filterTitle').value.toLowerCase();
+        const titleFilter = document.getElementById('filterTitle').value.trim().toLowerCase();
         const yearFilter = parseInt(document.getElementById('filterYear').value);
         const genreFilter = document.getElementById('filterGenre').value.toLowerCase();
         const ratingFilter = parseFloat(document.getElementById('filterRating').value);
