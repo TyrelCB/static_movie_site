@@ -356,11 +356,9 @@
             <h2>${movie.title} (${movie.year})</h2>
             <p><strong>Rating:</strong> ${movie.rating}</p>
             <p><strong>Genres:</strong> ${movie.genres}</p>
-            <p><strong>Summary:</strong> ${movie.summary}</p>
+            <p><strong>Summary:</strong> ${movie.summary.length > 600 ? movie.summary.substring(0, 600) + '...' : movie.summary}</p>
             <p><strong>Language:</strong> ${movie.language}</p>
-            <p><strong>MPA Rating:</strong> ${movie.mpa_rating}</p>
-            <p><strong>Seeds:</strong> ${movie.seeds}</p>
-            <p><strong>Quality:</strong> ${movie.quality}</p>
+                                    <p><strong>Quality:</strong> ${movie.quality}</p>
             <a href="${movie.torrent}" target="_blank" style="color: #1e90ff; text-decoration: none;"><strong>Download Torrent</strong></a>
             <div style="margin-top: 20px;">
                 <iframe width="100%" height="315" src="${movie.trailer}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
