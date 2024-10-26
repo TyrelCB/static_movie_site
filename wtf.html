@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Movie Database</title>
+    <link rel="stylesheet" href="styles.css">
+    <script defer src="script.js"></script>
+    <style>
+        body {
+            background-color: #1b0034;
+            color: #e0e0e0;
+            font-family: 'Poppins', sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        h1 {
+            text-align: center;
+            padding-top: 20px;
+            color: #ff007f;
+            text-shadow: 0 0 10px #ff007f, 0 0 20px #ff007f, 0 0 30px #ff007f, 0 0 40px #ff007f;
+        }
+        h2 {
+            text-align: center;
+            color: #39ff14;
+            text-shadow: 0 0 10px #39ff14, 0 0 20px #39ff14;
+        }
+        .movie-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+            padding: 20px;
+        }
+        .movie {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 200px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.8);
+            border-radius: 15px;
+            overflow: hidden;
+            background-color: #240046;
+            transition: transform 0.3s, box-shadow 0.3s;
+            cursor: pointer;
+            border: 2px solid #ff007f;
+        }
+        .movie:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 20px #ff007f;
+        }
+        .movie-cover {
+            width: 100%;
+            height: auto;
+            border-bottom: 2px solid #ff007f;
+        }
+        .movie-title {
+            padding: 15px;
+            text-align: center;
+            font-size: 1.1rem;
+            color: #39ff14;
+            text-shadow: 0 0 10px #39ff14, 0 0 20px #39ff14;
+        }
+        .filter-form {
+            text-align: center;
+            padding: 20px;
+            background-color: #240046;
+            border-radius: 10px;
+            margin: 20px;
+            box-shadow: 0 0 20px #ff007f;
+            border: 2px solid #ff007f;
+        }
+        .filter-form input, .filter-form select, .filter-form button {
+            margin: 5px;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #ff007f;
+            background-color: #330066;
+            color: #e0e0e0;
+            transition: background-color 0.3s, color 0.3s, box-shadow 0.3s;
+        }
+        .filter-form input:focus, .filter-form select:focus {
+            outline: none;
+            background-color: #4b0082;
+            box-shadow: 0 0 10px #ff007f;
+        }
+        .filter-form button {
+            cursor: pointer;
+            background-color: #ff007f;
+            color: #0d0d0d;
+            box-shadow: 0 0 10px #ff007f;
+        }
+        .filter-form button:hover {
+            background-color: #ff66b2;
+            box-shadow: 0 0 20px #ff66b2;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.9);
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background-color: #240046;
+            padding: 30px;
+            border-radius: 15px;
+            width: 80%;
+            max-width: 600px;
+            color: #e0e0e0;
+            box-shadow: 0 0 20px #ff007f;
+            border: 2px solid #ff007f;
+        }
+        .close-btn {
+            float: right;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #ff007f;
+            text-shadow: 0 0 10px #ff007f, 0 0 20px #ff007f;
+        }
+        .close-btn:hover {
+            color: #ff66b2;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <h1>Movie Database <span id="loadingSpinner" style="display: inline-block; border: 4px solid #ff007f; border-top: 4px solid #1b0034; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite;"></span></h1>
+    <h2 id="movieCount" style="text-align: center; color: #e0e0e0; font-size: 1.2rem; margin-top: 10px;"></h2>
+    <div class="filter-form">
+        <input type="text" id="filterTitle" placeholder="Title">
+        <input type="number" id="filterYear" placeholder="Year">
+        <select id="filterGenre">
+            <option value="">All Genres</option>
+            <option value="action">Action</option>
+            <option value="comedy">Comedy</option>
+            <option value="drama">Drama</option>
+            <option value="horror">Horror</option>
+            <option value="thriller">Thriller</option>
+            <option value="sci-fi">Sci-Fi</option>
+            <option value="romance">Romance</option>
+            <option value="adventure">Adventure</option>
+            <option value="animation">Animation</option>
+            <option value="fantasy">Fantasy</option>
+            <option value="mystery">Mystery</option>
+            <option value="documentary">Documentary</option>
+        </select>
+        <input type="number" step="0.1" id="filterRating" placeholder="Rating">
+        <select id="sortField">
+            <option value="date_uploaded">Sort by Date Uploaded</option>
+            <option value="rating">Sort by Rating</option>
+            <option value="year">Sort by Year</option>
+            <option value="title">Sort by Title</option>
+        </select>
+        <button onclick="filterMovies()">Filter</button>
+            </div>
+    <div id="movieContainer" class="movie-container"></div>
+
+    <div id="movieModal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeModal()">&times;</span>
+            <div id="modalDetails"></div>
+        </div>
+    </div>
+</body>
+<script>
+    let originalMovies = [];
+
+    // Function to get movie page count
+    async function moviePageCount() {
+        try {
+            const response = await fetch('https://yts.mx/api/v2/list_movies.json');
+            const data = await response.json();
+            const movieCount = data.data.movie_count;
+            console.log('Movies =', movieCount);
+            return Math.floor(movieCount / 50);
+        } catch (error) {
+            console.error('Error fetching movie count:', error);
+            return 0;
+        }
+    }
+
+    // Function to grab movie data
+    async function movieGrabber(limit, page, movies) {
+        const listMoviesUrl = `https://yts.mx/api/v2/list_movies.json?limit=${limit}&page=${page}`;
+        try {
+            const response = await fetch(listMoviesUrl);
+            const data = await response.json();
+            for (const movie of data.data.movies) {
+                if (parseInt(movie.year) < 1980 || movie.language !== 'en' || movie.yt_trailer_code === '') continue;
+                const movieEntry = {
+                    title: movie.title,
+                    year: parseInt(movie.year),
+                    rating: parseFloat(movie.rating),
+                    genres: Array.isArray(movie.genres) ? movie.genres.join(', ') : movie.genres,
+                    trailer: movie.yt_trailer_code ? `https://www.youtube.com/embed/${movie.yt_trailer_code}` : '',
+                    size: 0,
+                    torrent: '',
+                    seeds: 0,
+                    quality: '',
+                    movie_id: movie.id,
+                    summary: movie.summary,
+                    date_uploaded: movie.date_uploaded || '',
+                    large_cover_image: movie.large_cover_image,
+                    slug: movie.slug,
+                    mpa_rating: movie.mpa_rating,
+                    language: movie.language
+                };
+
+                for (const torrent of movie.torrents) {
+                    if (torrent.quality === '720p') {
+                        const existingMovie = movies.find(m => m.movie_id === movie.id);
+                        if (!existingMovie) {
+                            movies.push({ ...movieEntry, torrent: torrent.url, size: torrent.size_bytes, seeds: torrent.seeds, quality: torrent.quality });
+                        }
+                    }
+                }
+            }
+        } catch (error) {
+            console.error(`Error grabbing movie data for page ${page}:`, error);
+        }
+    }
+
+    // Function to process movie pages
+    async function processMovies() {
+        const movies = [];
+        const movieCount = await moviePageCount();
+        const pages = Array.from({ length: movieCount }, (_, i) => i + 1);
+
+        const fetchPromises = pages.map(page => movieGrabber(50, page, movies));
+        await Promise.all(fetchPromises);
+
+        return movies;
+    }
+
+    // Main function - fetch movie data and save it to an object
+    (async () => {
+        document.getElementById('loadingSpinner').style.display = 'inline-block';
+        const movies = await processMovies();
+        console.log('Movies fetched:', movies);
+
+        // You can save this movies object or use it as needed
+        const moviesObject = { movies: movies };
+        originalMovies = movies;
+        console.log('Movies Object:', moviesObject);
+
+        // Sort movies by date uploaded by default
+        originalMovies.sort((a, b) => new Date(b.date_uploaded) - new Date(a.date_uploaded));
+
+        // Generate HTML content
+        generateMoviePage(moviesObject);
+        document.getElementById('loadingSpinner').style.display = 'none';
+        document.getElementById('movieCount').textContent = `Total Movies: ${movies.length}`;
+    })();
+
+        // Function to generate HTML elements and build a page that shows movie covers
+    function generateMoviePage(moviesObject) {
+        const container = document.getElementById('movieContainer');
+        container.innerHTML = '';
+        
+        moviesObject.movies.forEach(movie => {
+            const movieElement = document.createElement('div');
+            movieElement.className = 'movie';
+
+            const movieCover = document.createElement('img');
+            movieCover.src = movie.large_cover_image;
+            movieCover.alt = movie.title;
+            movieCover.className = 'movie-cover';
+
+            const movieTitle = document.createElement('h3');
+            movieTitle.textContent = movie.title;
+            movieTitle.className = 'movie-title';
+
+            movieElement.appendChild(movieCover);
+            movieElement.appendChild(movieTitle);
+            movieElement.onclick = () => showModal(movie);
+            container.appendChild(movieElement);
+        });
+    }
+
+    // Function to filter movies based on user input
+    function filterMovies() {
+        const titleFilter = document.getElementById('filterTitle').value.toLowerCase();
+        const yearFilter = parseInt(document.getElementById('filterYear').value);
+        const genreFilter = document.getElementById('filterGenre').value.toLowerCase();
+        const ratingFilter = parseFloat(document.getElementById('filterRating').value);
+        const sortField = document.getElementById('sortField').value;
+
+        let filteredMovies = originalMovies.filter(movie => {
+            return (
+                (!titleFilter || movie.title.toLowerCase().includes(titleFilter)) &&
+                (!yearFilter || movie.year === yearFilter) &&
+                (!genreFilter || movie.genres.toLowerCase().includes(genreFilter)) &&
+                (!ratingFilter || movie.rating >= ratingFilter)
+            );
+        });
+
+        // Sort the filtered movies based on the selected sort field
+        filteredMovies.sort((a, b) => {
+            if (sortField === 'date_uploaded') {
+                return new Date(b.date_uploaded) - new Date(a.date_uploaded);
+            } else if (sortField === 'rating') {
+                return b.rating - a.rating;
+            } else if (sortField === 'year') {
+                return b.year - a.year;
+            } else if (sortField === 'title') {
+                return a.title.localeCompare(b.title);
+            }
+        });
+
+        document.getElementById('movieCount').textContent = `Total Movies: ${filteredMovies.length}`;
+        generateMoviePage({ movies: filteredMovies });
+    }
+
+    // Function to show modal with movie details
+    function showModal(movie) {
+        const modal = document.getElementById('movieModal');
+        const modalDetails = document.getElementById('modalDetails');
+        modalDetails.innerHTML = `
+            <h2>${movie.title} (${movie.year})</h2>
+            <p><strong>Rating:</strong> ${movie.rating}</p>
+            <p><strong>Genres:</strong> ${movie.genres}</p>
+            <p><strong>Summary:</strong> ${movie.summary}</p>
+            <p><strong>Language:</strong> ${movie.language}</p>
+            <p><strong>MPA Rating:</strong> ${movie.mpa_rating}</p>
+            <p><strong>Seeds:</strong> ${movie.seeds}</p>
+            <p><strong>Quality:</strong> ${movie.quality}</p>
+            <a href="${movie.torrent}" target="_blank" style="color: #1e90ff; text-decoration: none;"><strong>Download Torrent</strong></a>
+            <div style="margin-top: 20px;">
+                <iframe width="100%" height="315" src="${movie.trailer}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+            </div>
+        `;
+        modal.style.display = 'flex';
+    }
+
+    // Function to close modal
+    function closeModal() {
+        document.getElementById('movieModal').style.display = 'none';
+    }
+
+    // Add event listener to submit filter form on Enter key press
+    document.querySelectorAll('.filter-form input').forEach(input => {
+        input.addEventListener('keyup', event => {
+            if (event.key === 'Enter') {
+                filterMovies();
+            }
+        });
+    });
+</script>
+</html>
+
