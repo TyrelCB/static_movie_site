@@ -257,11 +257,37 @@
 
         // Generate HTML content
         generateMoviePage(moviesObject);
+        lazyLoad();
         document.getElementById('loadingSpinner').style.display = 'none';
         document.getElementById('movieCount').textContent = `Total Movies: ${movies.length}`;
     })();
 
-        // Function to generate HTML elements and build a page that shows movie covers
+        // Function to load images when they come into view
+    function lazyLoad() {
+        const images = document.querySelectorAll('img[data-src]');
+        const config = {
+            root: null,
+            rootMargin: '0px',
+            threshold: 0.1
+        };
+
+        const observer = new IntersectionObserver((entries, self) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const img = entry.target;
+                    img.src = img.dataset.src;
+                    img.removeAttribute('data-src');
+                    self.unobserve(img);
+                }
+            });
+        }, config);
+
+        images.forEach(image => {
+            observer.observe(image);
+        });
+    }
+
+    // Function to generate HTML elements and build a page that shows movie covers
     function generateMoviePage(moviesObject) {
         const container = document.getElementById('movieContainer');
         container.innerHTML = '';
@@ -271,7 +297,8 @@
             movieElement.className = 'movie';
 
             const movieCover = document.createElement('img');
-            movieCover.src = movie.large_cover_image;
+            movieCover.dataset.src = movie.large_cover_image;
+            movieCover.loading = 'lazy';
             movieCover.alt = movie.title;
             movieCover.className = 'movie-cover';
 
@@ -318,6 +345,7 @@
 
         document.getElementById('movieCount').textContent = `Total Movies: ${filteredMovies.length}`;
         generateMoviePage({ movies: filteredMovies });
+        lazyLoad();
     }
 
     // Function to show modal with movie details
@@ -356,4 +384,3 @@
     });
 </script>
 </html>
-
