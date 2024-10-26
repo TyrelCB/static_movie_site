@@ -133,7 +133,7 @@
     </style>
 </head>
 <body>
-    <h1>Movie Database <span id="loadingSpinner" style="display: inline-block; border: 4px solid #ff007f; border-top: 4px solid #1b0034; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite;"></span></h1>
+    <h1>Movie Database </h1>
     <h2 id="movieCount" style="text-align: center; color: #e0e0e0; font-size: 1.2rem; margin-top: 10px;"></h2>
     <div class="filter-form">
         <input type="text" id="filterTitle" placeholder="Title">
@@ -162,7 +162,14 @@
         </select>
         <button onclick="filterMovies()">Filter</button>
             </div>
-    <div id="movieContainer" class="movie-container"></div>
+    <div id="loadingModal" class="modal">
+        <div class="modal-content" style="text-align: center;">
+            <span id="loadingSpinner" style="display: inline-block; border: 4px solid #ff007f; border-top: 4px solid #1b0034; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite;"></span>
+            <p style="color: #ff007f; margin-top: 20px;">Fetching movies...</p>
+        </div>
+    </div>
+
+<div id="movieContainer" class="movie-container"></div>
 
     <div id="movieModal" class="modal">
         <div class="modal-content">
@@ -170,6 +177,18 @@
             <div id="modalDetails"></div>
         </div>
     </div>
+<div id="viewDimensions" style="text-align: center; color: #39ff14; margin-top: 20px; font-size: 1.1rem;"></div>
+
+<script>
+    function updateViewDimensions() {
+        const width = window.innerWidth;
+        const height = window.innerHeight;
+        document.getElementById('viewDimensions').textContent = `Window Dimensions: Width = ${width}px, Height = ${height}px`;
+    }
+
+    window.addEventListener('resize', updateViewDimensions);
+    window.addEventListener('load', updateViewDimensions);
+</script>
 </body>
 <script>
     let originalMovies = [];
@@ -249,7 +268,7 @@
 // Main function - fetch movie data and save it to an object
 (async () => {
         document.getElementById('filterYear').value = currentYear;
-        document.getElementById('loadingSpinner').style.display = 'inline-block';
+        document.getElementById('loadingModal').style.display = 'flex';
         const movies = await processMovies();
         console.log('Movies fetched:', movies);
 
@@ -264,7 +283,7 @@
         // Generate HTML content
         generateMoviePage(moviesObject);
         lazyLoad();
-        document.getElementById('loadingSpinner').style.display = 'none';
+        document.getElementById('loadingModal').style.display = 'none';
         document.getElementById('movieCount').textContent = `Total Movies: ${movies.length}`;
     })();
 
