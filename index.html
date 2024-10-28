@@ -78,7 +78,6 @@
                 z-index: 1000;
             }
         }
-
         .filter-form input, .filter-form select, .filter-form button {
             margin: 5px;
             padding: 10px;
@@ -389,18 +388,23 @@
             console.log('Executing filterMovies function');
             const titleFilter = document.getElementById('filterTitle').value.trim().toLowerCase();
             const yearFilter = parseInt(document.getElementById('filterYear').value);
-            const genreFilter = document.getElementById('filterGenre').value.toLowerCase();
+            const genreFilter = document.getElementById('filterGenre').value;
             const ratingFilter = parseFloat(document.getElementById('filterRating').value);
             const sortField = document.getElementById('sortField').value;
 
-            let filteredMovies = originalMovies.filter(movie => {
-                return (
-                    (!titleFilter || movie.title.toLowerCase().includes(titleFilter)) &&
-                    (!yearFilter || movie.year === yearFilter) &&
-                    (!genreFilter || movie.genres.toLowerCase().includes(genreFilter)) &&
-                    (!ratingFilter || movie.rating >= ratingFilter)
-                );
-            });
+            let filteredMovies;
+
+            if (titleFilter) {
+                filteredMovies = originalMovies.filter(movie => {
+                    return movie.title.toLowerCase().includes(titleFilter);
+                });
+            } else {
+                filteredMovies = originalMovies.filter(movie => {
+                    return (!yearFilter || movie.year === yearFilter) &&
+                           (!genreFilter || movie.genres.toLowerCase().includes(genreFilter.toLowerCase())) &&
+                           (!ratingFilter || movie.rating >= ratingFilter);
+                });
+            }
 
             // Sort the filtered movies based on the selected sort field
             filteredMovies.sort((a, b) => {
