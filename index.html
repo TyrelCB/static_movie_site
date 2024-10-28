@@ -56,7 +56,7 @@
             border-bottom: 2px solid #ff007f;
         }
         .movie-title {
-            padding: 15px;
+            padding: 5px;
             text-align: center;
             font-size: 1.1rem;
             color: #ff007f;
@@ -485,6 +485,11 @@
                     star.textContent = '★';
                     movieRating.appendChild(star);
                 }
+                const ratingText = document.createElement('span');
+                ratingText.textContent = ` (${movie.rating}/10)`;
+                ratingText.style.color = '#ffcc00';
+                ratingText.style.fontSize = '1.2rem';
+                movieRating.appendChild(ratingText);
 
                 movieElement.appendChild(movieCover);
                 movieElement.appendChild(movieTitle);
