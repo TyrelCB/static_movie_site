@@ -384,7 +384,7 @@
                             const existingMovie = movies.find(m => m.movie_id === movie.id);
                             if (!existingMovie) {
                                 movies.push({ ...movieEntry, torrent: torrent.url, size: torrent.size_bytes, seeds: torrent.seeds, quality: torrent.quality });
-                                document.getElementById('loadingCount').textContent = `Fetching movies... (${movies.length})`;
+                                document.getElementById('loadingCount').textContent = `Fetching movies... (${movies.length.toLocaleString()})`;
                             }
                         }
                     }
@@ -452,7 +452,7 @@
             setTimeout(() => {
                 document.getElementById('loadingModal').style.display = 'none';
             }, 3000);
-            document.getElementById('movieCount').textContent = `Total Movies: ${movies.length}`;
+            document.getElementById('movieCount').textContent = `Total Movies: ${movies.length.toLocaleString()}`;
             await Promise.all(movies.map(async (movie) => {
                 const cast = await getMovieCast(movie.movie_id);
                 movie.cast = cast.map(member => member.name).join(', ');
@@ -564,7 +564,7 @@
                 }
             });
 
-            document.getElementById('movieCount').textContent = `Total Movies: ${filteredMovies.length}`;
+            document.getElementById('movieCount').textContent = `Total Movies: ${filteredMovies.length.toLocaleString()}`;
             generateMoviePage({ movies: filteredMovies });
             lazyLoad();
         }
