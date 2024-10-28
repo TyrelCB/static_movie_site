@@ -465,7 +465,7 @@
                 movieCover.className = 'movie-cover';
 
                 const movieTitle = document.createElement('h3');
-                movieTitle.textContent = movie.title;
+                movieTitle.textContent = `${movie.title} (${movie.year})`;
                 movieTitle.className = 'movie-title';
 
                 movieElement.appendChild(movieCover);
