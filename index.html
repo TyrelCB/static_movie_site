@@ -164,7 +164,7 @@
     <h2 id="movieCount" style="text-align: center; color: #e0e0e0; font-size: 1.2rem; margin-top: 10px;"></h2>
     <div class="filter-form">
         <input type="text" id="filterTitle" placeholder="Title" oninput="filterMovies()">
-        <input type="number" id="filterYear" placeholder="Year" value="" onchange="filterMovies()">
+        <input type="number" id="filterYear" placeholder="Year" value="" >
         <select id="filterGenre" onchange="filterMovies()">
             <option value="">All Genres</option>
             <option value="action">Action</option>
@@ -179,6 +179,8 @@
             <option value="fantasy">Fantasy</option>
             <option value="mystery">Mystery</option>
             <option value="documentary">Documentary</option>
+            <option value="Western">Western</option>
+            <option value="Sport">Sport</option>
         </select>
         <input type="number" step="0.5" id="filterRating" placeholder="Rating" value="4" oninput="filterMovies()">
         <select id="sortField" onchange="filterMovies()">
