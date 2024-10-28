@@ -166,14 +166,25 @@
             border: 2px solid #39ff14;
         }
         .close-btn {
+            position: relative;
             float: right;
             font-size: 1.5rem;
             cursor: pointer;
             color: #ff007f;
             text-shadow: 0 0 20px #ff007f, 0 0 30px #00ffff;
+            width: 40px;
+            height: 40px;
+            border: 2px solid #ff007f;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.3s, color 0.3s, box-shadow 0.3s;
         }
         .close-btn:hover {
             color: #39ff14;
+            background-color: #000000;
+            box-shadow: 0 0 30px #39ff14;
         }
         @keyframes spin {
             0% { transform: rotate(0deg); }
