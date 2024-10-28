@@ -361,8 +361,6 @@
                         mpa_rating: movie.mpa_rating,
                         language: movie.language
                     };
-                    const cast = await getMovieCast(movie.id);
-                    movieEntry.cast = cast.map(member => member.name).join(', ');
 
                     for (const torrent of movie.torrents) {
                         if (torrent.quality === '720p') {
@@ -438,6 +436,10 @@
                 document.getElementById('loadingModal').style.display = 'none';
             }, 3000);
             document.getElementById('movieCount').textContent = `Total Movies: ${movies.length}`;
+            await Promise.all(movies.map(async (movie) => {
+                const cast = await getMovieCast(movie.movie_id);
+                movie.cast = cast.map(member => member.name).join(', ');
+            }));
         })();
 
         // Function to load images when they come into view
