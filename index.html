@@ -103,6 +103,10 @@
             background-color: #240046;
             box-shadow: 0 0 10px #00ffff;
         }
+
+        #filterRatingContianer {
+            display: inline;
+        }
         
         @media (max-width: 600px) {
             .filter-form input, .filter-form select {
@@ -111,10 +115,13 @@
             }
             .filter-container {
                 display: block;
+                margin-bottom: 5px;
             }
             .filter-form label {
                 display: inline;
-                margin-bottom: 5px;
+            }
+            #filterRatingContianer {
+            display: none;
             }
         }
 
@@ -206,9 +213,9 @@
                 <option value="Sport">Sport</option>
             </select>
         </div>
-        <div class="filter-container">
+        <div class="filter-container" id="filterRatingContianer">
             <label for="filterRating">Rating</label>
-            <input type="number" step="0.5" id="filterRating" placeholder="Rating" value="4" oninput="clearTitleFilter(); filterMovies()">
+            <input type="number" step="1" id="filterRating" placeholder="Rating" value="4" oninput="clearTitleFilter(); filterMovies()">
         </div>
         <div class="filter-container">
             <label for="sortField">Sort By</label>
