@@ -254,8 +254,8 @@
     <div class="filter-form">
         <div class="filter-container">
             <label for="filterTitle">Title</label>
-            <input type="text" id="filterTitle" placeholder="Title" oninput="filterMovies(); showSuggestions(this.value)">
-            <div id="suggestions" class="suggestions-container"></div>
+            <input  id="filterTitle" placeholder="Title" list="titleSuggestions" oninput="filterMovies(); showSuggestions(this.value)">
+            <datalist id="titleSuggestions"></datalist>
         </div>
         <div class="filter-container">
             <label for="filterYear">Year</label>
@@ -616,26 +616,20 @@
         }
     }
 
-    </script>
-<script>
         function showSuggestions(input) {
-            const suggestionsContainer = document.getElementById('suggestions');
-            suggestionsContainer.innerHTML = '';
+            const datalist = document.getElementById('titleSuggestions');
+            datalist.innerHTML = '';
             if (input.length < 2) return;
             
             const filteredMovies = originalMovies.filter(movie => movie.title.toLowerCase().includes(input.toLowerCase())).slice(0, 5);
             
             filteredMovies.forEach(movie => {
-                const suggestionItem = document.createElement('div');
-                suggestionItem.className = 'suggestion-item';
-                suggestionItem.textContent = movie.title;
-                suggestionItem.onclick = () => {
-                    document.getElementById('filterTitle').value = movie.title;
-                    filterMovies();
-                };
-                suggestionsContainer.appendChild(suggestionItem);
+                const option = document.createElement('option');
+                option.value = movie.title;
+                datalist.appendChild(option);
             });
-        }
+        };
+                
     </script>
     
 </body>
