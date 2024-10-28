@@ -9,7 +9,7 @@
     <style>
         body {
             background-color: #000000;
-            color: #ffffff;
+            color: #00ff00;
             font-family: 'Poppins', sans-serif;
             margin: 0;
             padding: 0;
@@ -18,12 +18,12 @@
             text-align: center;
             padding-top: 20px;
             color: #00ff00;
-            text-shadow: 0 0 10px #ff0000, 0 0 20px #ff0000, 0 0 30px #ff0000, 0 0 40px #ff0000;
+            text-shadow: 0 0 20px #39ff14, 0 0 40px #ff0000;
         }
         h2 {
             text-align: center;
             color: #00ffff;
-            text-shadow: 0 0 10px #00ffff, 0 0 20px #00ffff;
+            text-shadow: 0 0 20px #00ffff, 0 0 30px #ff007f;
         }
         .movie-container {
             display: flex;
@@ -37,17 +37,17 @@
             align-items: center;
             width: calc(50% - 20px);
             max-width: 250px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.8);
+            box-shadow: 0 4px 15px rgba(0, 255, 0, 0.8);
             border-radius: 15px;
             overflow: hidden;
             background-color: #000000;
             transition: transform 0.3s, box-shadow 0.3s;
             cursor: pointer;
-            border: 2px solid #ff0000;
+            border: 2px solid #00ff00;
         }
         .movie:hover {
             transform: scale(1.05);
-            box-shadow: 0 0 20px #00ffff;
+            box-shadow: 0 0 20px #ff007f;
         }
         .movie-cover {
             width: 100%;
@@ -59,17 +59,17 @@
             padding: 15px;
             text-align: center;
             font-size: 1.1rem;
-            color: #39ff14;
-            text-shadow: 0 0 10px #39ff14, 0 0 20px #39ff14;
+            color: #ff007f;
+            text-shadow: 0 0 20px #ff007f, 0 0 30px #00ffff;
         }
         .filter-form {
             text-align: center;
             padding: 20px;
-            background-color: #240046;
+            background-color: #1b0034;
             border-radius: 10px;
             margin: 20px;
-            box-shadow: 0 0 20px #ff007f;
-            border: 2px solid #ff007f;
+            box-shadow: 0 0 30px #39ff14;
+            border: 2px solid #39ff14;
         }
         @media (min-width: 600px) {
             .filter-form {
@@ -78,30 +78,22 @@
                 z-index: 1000;
             }
         }
-        .filter-form input, .filter-form select, .filter-form button {
+        .filter-form input, .filter-form select {
             margin: 5px;
             padding: 10px;
             border-radius: 5px;
             border: 1px solid #ff007f;
             background-color: #000000;
-            color: #e0e0e0;
+            color: #00ff00;
             transition: background-color 0.3s, color 0.3s, box-shadow 0.3s;
         }
         .filter-form input:focus, .filter-form select:focus {
             outline: none;
-            background-color: #4b0082;
-            box-shadow: 0 0 10px #00ff00;
+            background-color: #240046;
+            box-shadow: 0 0 10px #00ffff;
         }
-        .filter-form button {
-            cursor: pointer;
-            background-color: #0000ff;
-            color: #ffffff;
-            box-shadow: 0 0 10px #ff007f;
-        }
-        .filter-form button:hover {
-            background-color: #800080;
-            box-shadow: 0 0 20px #ff0000;
-        }
+        
+        
         .modal {
             display: none;
             position: fixed;
@@ -115,24 +107,24 @@
             align-items: center;
         }
         .modal-content {
-            background-color: #240046;
+            background-color: #1b0034;
             padding: 30px;
             border-radius: 15px;
             width: 80%;
             max-width: 600px;
-            color: #e0e0e0;
-            box-shadow: 0 0 20px #ff007f;
-            border: 2px solid #ff007f;
+            color: #00ff00;
+            box-shadow: 0 0 40px #ff007f;
+            border: 2px solid #39ff14;
         }
         .close-btn {
             float: right;
             font-size: 1.5rem;
             cursor: pointer;
             color: #ff007f;
-            text-shadow: 0 0 10px #ff007f, 0 0 20px #ff007f;
+            text-shadow: 0 0 20px #ff007f, 0 0 30px #00ffff;
         }
         .close-btn:hover {
-            color: #ff66b2;
+            color: #39ff14;
         }
         @keyframes spin {
             0% { transform: rotate(0deg); }
@@ -158,9 +150,9 @@
     </style>
 </head>
 <body>
-    <h1>Movie Database </h1>
-    <h3 style="text-align: center; color: #39ff14; margin-top: 10px;">Built with AI</h3>
-    <h2 id="movieCount" style="text-align: center; color: #e0e0e0; font-size: 1.2rem; margin-top: 10px;"></h2>
+    <h1>Movie Database</h1>
+    <h3 style="text-align: center; color: #ff007f; margin-top: 10px;">Built with AI</h3>
+    <h2 id="movieCount" style="text-align: center; color: #00ff00; font-size: 1.2rem; margin-top: 10px;"></h2>
     <div class="filter-form">
         <input type="text" id="filterTitle" placeholder="Title" oninput="filterMovies()">
         <input type="number" id="filterYear" placeholder="Year" value="" onchange="clearTitleFilter(); filterMovies();">
@@ -181,17 +173,18 @@
             <option value="Western">Western</option>
             <option value="Sport">Sport</option>
         </select>
-        <input type="number" step="0.5" id="filterRating" placeholder="Rating" value="4" oninput="clearTitleFilter(); filterMovies()">        <select id="sortField" onchange="filterMovies()">
+        <input type="number" step="0.5" id="filterRating" placeholder="Rating" value="4" oninput="clearTitleFilter(); filterMovies()">
+        <select id="sortField" onchange="filterMovies()">
             <option value="date_uploaded">Sort by Date Uploaded</option>
             <option value="rating">Sort by Rating</option>
             <option value="year">Sort by Year</option>
             <option value="title">Sort by Title</option>
         </select>
-        <button onclick="filterMovies()">Filter</button>
+        
     </div>
     <div id="loadingModal" class="modal">
         <div class="modal-content" style="text-align: center;">
-            <span id="loadingSpinner" style="display: inline-block; border: 4px solid #ff007f; border-top: 4px solid #000000; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite;"></span>
+            <span id="loadingSpinner" style="display: inline-block; border: 4px solid #39ff14; border-top: 4px solid #000000; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite;"></span>
             <p id="loadingCount" style="color: #ff007f; margin-top: 20px;">Fetching movies... (0)</p>
             <p id="loadingTime" style="color: #00ff00; margin-top: 10px;"></p>
         </div>
