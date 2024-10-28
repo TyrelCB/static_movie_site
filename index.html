@@ -62,6 +62,14 @@
             color: #ff007f;
             text-shadow: 0 0 20px #ff007f, 0 0 30px #00ffff;
         }
+        .movie-rating {
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        .star {
+            color: #ffcc00;
+            font-size: 1.2rem;
+        }
         .filter-form {
             text-align: center;
             padding: 20px;
@@ -468,8 +476,19 @@
                 movieTitle.textContent = `${movie.title} (${movie.year})`;
                 movieTitle.className = 'movie-title';
 
+                const movieRating = document.createElement('div');
+                movieRating.className = 'movie-rating';
+                const fullStars = Math.floor(movie.rating);
+                for (let i = 0; i < fullStars; i++) {
+                    const star = document.createElement('span');
+                    star.className = 'star';
+                    star.textContent = '★';
+                    movieRating.appendChild(star);
+                }
+
                 movieElement.appendChild(movieCover);
                 movieElement.appendChild(movieTitle);
+                movieElement.appendChild(movieRating);
                 movieElement.onclick = () => showModal(movie);
                 container.appendChild(movieElement);
             });
