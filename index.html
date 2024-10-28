@@ -242,7 +242,9 @@
         </div>
         <div class="filter-container">
             <label for="filterYear">Year</label>
-            <input type="number" id="filterYear" placeholder="Year" value="" onchange="clearTitleFilter(); filterMovies();">
+            <select id="filterYear" onchange="clearTitleFilter(); filterMovies();">
+
+            </select>
         </div>
         <div class="filter-container">
             <label for="filterGenre">Genre</label>
@@ -401,7 +403,13 @@
         }
 
         const currentYear = new Date().getFullYear();
-
+        const yearSelect = document.getElementById('filterYear');
+        for (let year = 1980; year <= currentYear; year++) {
+            const option = document.createElement('option');
+            option.value = year;
+            option.textContent = year;
+            yearSelect.appendChild(option);
+        }
         // Main function - fetch movie data and save it to an object
         (async () => {
             document.getElementById('filterYear').value = currentYear;
