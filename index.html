@@ -164,7 +164,7 @@
     <h2 id="movieCount" style="text-align: center; color: #e0e0e0; font-size: 1.2rem; margin-top: 10px;"></h2>
     <div class="filter-form">
         <input type="text" id="filterTitle" placeholder="Title" oninput="filterMovies()">
-        <input type="number" id="filterYear" placeholder="Year" value="" >
+        <input type="number" id="filterYear" placeholder="Year" value="" onchange="filterMovies()">
         <select id="filterGenre" onchange="filterMovies()">
             <option value="">All Genres</option>
             <option value="action">Action</option>
@@ -194,7 +194,7 @@
     <div id="loadingModal" class="modal">
         <div class="modal-content" style="text-align: center;">
             <span id="loadingSpinner" style="display: inline-block; border: 4px solid #ff007f; border-top: 4px solid #000000; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite;"></span>
-            <p style="color: #ff007f; margin-top: 20px;">Fetching movies...</p>
+            <p id="loadingCount" style="color: #ff007f; margin-top: 20px;">Fetching movies... (0)</p>
         </div>
     </div>
 
@@ -270,6 +270,7 @@
                         const existingMovie = movies.find(m => m.movie_id === movie.id);
                         if (!existingMovie) {
                             movies.push({ ...movieEntry, torrent: torrent.url, size: torrent.size_bytes, seeds: torrent.seeds, quality: torrent.quality });
+                        document.getElementById('loadingCount').textContent = `Fetching movies... (${movies.length})`;
                         }
                     }
                 }
