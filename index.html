@@ -245,6 +245,43 @@
             width: 0;
             transition: width 0.3s ease;
         }
+        #paginationControls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 20px auto;
+        }
+
+        #paginationControls button {
+            background-color: #ff007f;
+            color: #ffffff;
+            border: none;
+            border-radius: 5px;
+            padding: 10px 20px;
+            cursor: pointer;
+            margin: 0 5px;
+            transition: background-color 0.3s, box-shadow 0.3s;
+            font-size: 1rem;
+        }
+
+        #paginationControls button:hover {
+            background-color: #00ff00;
+            color: #000000;
+            box-shadow: 0 0 10px #ff007f;
+        }
+
+        #paginationControls button:disabled {
+            background-color: #cccccc;
+            color: #666666;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        #paginationControls #pageInfo {
+            font-size: 1.2rem;
+            color: #ffffff;
+            margin: 0 10px;
+        }
     </style>
 </head>
 <body>
@@ -315,7 +352,13 @@
         </div>
     </div>
     <div id="viewDimensions" style="text-align: center; color: #39ff14; margin-top: 20px; font-size: 1.1rem;"></div>
+    <div id="paginationControls" style="text-align: center; margin: 20px;">
+    <button id="prevPage" onclick="changePage(-1)" disabled>Previous</button>
+    <span id="pageInfo"></span>
+    <button id="nextPage" onclick="changePage(1)">Next</button>
+    </div>
     <button class="back-to-top-button" onclick="window.scrollTo({ top: 0, behavior: 'smooth' });">&uarr;</button>
+
     <script>
         function updateViewDimensions() {
             const width = window.innerWidth;
@@ -331,6 +374,9 @@
         window.addEventListener('load', updateViewDimensions);
     </script>
     <script>
+        let currentPage = 1;
+        const moviesPerPage = 40;
+        let totalPages = 1;
         let originalMovies = [];
 
         // Function to get movie page count
@@ -490,21 +536,25 @@
             console.log('Executing generateMoviePage function with moviesObject:', moviesObject);
             const container = document.getElementById('movieContainer');
             container.innerHTML = '';
-            
-            moviesObject.movies.slice(0, 100).forEach(movie => {
+        
+            const start = (currentPage - 1) * moviesPerPage;
+            const end = start + moviesPerPage;
+            const moviesToShow = moviesObject.movies.slice(start, end);
+        
+            moviesToShow.forEach(movie => {
                 const movieElement = document.createElement('div');
                 movieElement.className = 'movie';
-
+        
                 const movieCover = document.createElement('img');
                 movieCover.dataset.src = movie.large_cover_image;
                 movieCover.loading = 'lazy';
                 movieCover.alt = movie.title;
                 movieCover.className = 'movie-cover';
-
+        
                 const movieTitle = document.createElement('h3');
                 movieTitle.textContent = `${movie.title} (${movie.year})`;
                 movieTitle.className = 'movie-title';
-
+        
                 const movieRating = document.createElement('div');
                 movieRating.className = 'movie-rating';
                 const fullStars = Math.floor(movie.rating);
@@ -519,13 +569,27 @@
                 ratingText.style.color = '#ffcc00';
                 ratingText.style.fontSize = '1.2rem';
                 movieRating.appendChild(ratingText);
-
+        
                 movieElement.appendChild(movieCover);
                 movieElement.appendChild(movieTitle);
                 movieElement.appendChild(movieRating);
                 movieElement.onclick = () => showModal(movie);
                 container.appendChild(movieElement);
             });
+        
+            updatePaginationControls(moviesObject.movies.length);
+        }
+
+        function changePage(direction) {
+            currentPage += direction;
+            filterMovies();
+        }
+
+        function updatePaginationControls(totalMovies) {
+            totalPages = Math.ceil(totalMovies / moviesPerPage);
+            document.getElementById('pageInfo').textContent = `Page ${currentPage} of ${totalPages}`;
+            document.getElementById('prevPage').disabled = currentPage === 1;
+            document.getElementById('nextPage').disabled = currentPage === totalPages;
         }
 
         // Function to filter movies based on user input
@@ -536,9 +600,9 @@
             const genreFilter = document.getElementById('filterGenre').value;
             const ratingFilter = parseFloat(document.getElementById('filterRating').value);
             const sortField = document.getElementById('sortField').value;
-
+        
             let filteredMovies;
-
+        
             if (titleFilter) {
                 filteredMovies = originalMovies.filter(movie => {
                     return movie.title.toLowerCase().includes(titleFilter);
@@ -550,7 +614,7 @@
                            (!ratingFilter || movie.rating >= ratingFilter);
                 });
             }
-
+        
             // Sort the filtered movies based on the selected sort field
             filteredMovies.sort((a, b) => {
                 if (sortField === 'date_uploaded') {
@@ -563,7 +627,7 @@
                     return a.title.localeCompare(b.title);
                 }
             });
-
+        
             document.getElementById('movieCount').textContent = `Total Movies: ${filteredMovies.length.toLocaleString()}`;
             generateMoviePage({ movies: filteredMovies });
             lazyLoad();
