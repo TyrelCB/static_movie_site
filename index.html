@@ -131,6 +131,10 @@
         #filterRatingContianer {
             display: inline;
         }
+
+        .back-to-top-button {
+            display: none;
+        }
         
         @media (max-width: 600px) {
 
@@ -352,10 +356,22 @@
         </div>
     </div>
     <div id="viewDimensions" style="text-align: center; color: #39ff14; margin-top: 20px; font-size: 1.1rem;"></div>
-    <div id="paginationControls" style="text-align: center; margin: 20px;">
-    <button id="prevPage" onclick="changePage(-1)" disabled>Previous</button>
-    <span id="pageInfo"></span>
-    <button id="nextPage" onclick="changePage(1)">Next</button>
+    
+<div id="paginationControls" style="text-align: center; margin: 20px;">
+  <button id="prevPage" onclick="changePage(-1)" disabled>Previous</button>
+  <span id="pageInfo"></span>
+  <button id="nextPage" onclick="changePage(1)">Next</button>
+</div>
+<div id="moviesPerPageContainer" style="text-align: center; margin: 10px;">
+  <label for="moviesPerPageDropdown" style="color: #00ff00; margin-right: 10px;">Movies per page:</label>
+  <select id="moviesPerPageDropdown" onchange="updateMoviesPerPage(); resetPagination()" style="padding: 10px; border-radius: 5px; border: 1px solid #ff007f; background-color: #000000; color: #00ff00;">
+    <option value="10">10</option>
+    <option value="20">20</option>
+    <option value="40" selected>40</option>
+    <option value="100">100</option>
+    <option value="all">All</option>
+  </select>
+</div>
     </div>
     <button class="back-to-top-button" onclick="window.scrollTo({ top: 0, behavior: 'smooth' });">&uarr;</button>
 
@@ -375,7 +391,7 @@
     </script>
     <script>
         let currentPage = 1;
-        const moviesPerPage = 40;
+        let moviesPerPage = 40;
         let totalPages = 1;
         let originalMovies = [];
 
@@ -681,7 +697,19 @@
             currentPage = 1; // Reset to the first page
             filterMovies(); // Apply the filter and update the displayed movies
         }
-                
+        
+        // Function to update movies per page
+        function updateMoviesPerPage() {
+            const dropdown = document.getElementById('moviesPerPageDropdown');
+            const value = dropdown.value;
+            if (value === 'all') {
+                moviesPerPage = originalMovies.length;
+            } else {
+                moviesPerPage = parseInt(value, 10);
+            }
+            resetPagination();
+            updatePaginationControls();
+        }
     </script>
     
 </body>
