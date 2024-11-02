@@ -499,6 +499,7 @@
                 document.getElementById('loadingModal').style.display = 'none';
             }, 3000);
             document.getElementById('movieCount').textContent = `Total Movies: ${movies.length.toLocaleString()}`;
+            filterMovies();
         })();
 
         // Function to load images when they come into view
