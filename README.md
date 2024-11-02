@@ -1,6 +1,6 @@
 # static_movie_site
 
-Deploying a single HTML file as a static site on GitHub Pages is straightforward. Here’s a step-by-step guide:
+Deploying a single HTML file as a static site on GitHub Pages and/or Netlify is straightforward. Here’s a step-by-step guide:
 
 ### Step 1: Create a GitHub Repository
 1. Go to [GitHub](https://github.com) and create a new repository for your project.
@@ -72,7 +72,7 @@ Deploying a single HTML file as a static site on GitHub Pages is straightforward
    git push origin main
    ```
 
-### Step 4: Access Your Site
+### Step 4: Access Your Site (Github Pages)
 Once the workflow completes, your site will be deployed to GitHub Pages. You can access it at `https://your-username.github.io/your-repo-name/`. You can customize this URL in the **Repository settings** under **Pages** if desired.
 
 Your static site with a single HTML file is now live on GitHub Pages!
@@ -88,7 +88,7 @@ Your static site with a single HTML file is now live on GitHub Pages!
    - **Publish Directory**: Leave it as the root directory (`/`).
 6. Click **Deploy Site**.
 
-### Step 6: Access Your Site
+### Step 6: Access Your Site (Netlify)
 Once deployed, Netlify will give you a URL for your site, and it should be live within seconds. You can customize this URL in the **Site settings** if desired. 
 
 Your static site with a single HTML file is now live on Netlify!
