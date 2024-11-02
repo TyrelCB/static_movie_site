@@ -291,18 +291,18 @@
     <div class="filter-form">
         <div class="filter-container">
             <label for="filterTitle">Title</label>
-            <input  id="filterTitle" placeholder="Title" list="titleSuggestions" oninput="filterMovies(); showSuggestions(this.value)">
+            <input  id="filterTitle" placeholder="Title" list="titleSuggestions" oninput="resetPagination(); filterMovies(); showSuggestions(this.value)">
             <datalist id="titleSuggestions"></datalist>
         </div>
         <div class="filter-container">
             <label for="filterYear">Year</label>
-            <select id="filterYear" onchange="clearTitleFilter(); filterMovies();">
+            <select id="filterYear" onchange="clearTitleFilter(); resetPagination();  filterMovies();">
 
             </select>
         </div>
         <div class="filter-container">
             <label for="filterGenre">Genre</label>
-            <select id="filterGenre" onchange="clearTitleFilter(); filterMovies()">
+            <select id="filterGenre" onchange="clearTitleFilter(); resetPagination();  filterMovies()">
                 <option value="">All Genres</option>
                 <option value="action">Action</option>
                 <option value="comedy">Comedy</option>
@@ -322,7 +322,7 @@
         </div>
         <div class="filter-container" id="filterRatingContianer">
             <label for="filterRating">Rating</label>
-            <input type="number" step="1" id="filterRating" placeholder="Rating" value="4" oninput="clearTitleFilter(); filterMovies()">
+            <input type="number" step="1" id="filterRating" placeholder="Rating" value="4" oninput="clearTitleFilter(); resetPagination(); filterMovies()">
         </div>
         <div class="filter-container">
             <label for="sortField">Sort By</label>
@@ -693,6 +693,11 @@
                 datalist.appendChild(option);
             });
         };
+    
+        function resetPagination() {
+            currentPage = 1; // Reset to the first page
+            filterMovies(); // Apply the filter and update the displayed movies
+        }
                 
     </script>
     
