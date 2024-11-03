@@ -6,6 +6,15 @@
     <title>Movie Database</title>
     <link rel="stylesheet" href="styles.css">
     <script defer src="script.js"></script>
+<script>
+    window.addEventListener('load', function() {
+        if (window.innerWidth < 600) {
+            const dropdown = document.getElementById('moviesPerPageDropdown');
+            dropdown.value = '10';
+            updateMoviesPerPage();
+        }
+    });
+</script>
     <style>
         .suggestions-container {
             position: absolute;
