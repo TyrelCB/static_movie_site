@@ -7,6 +7,50 @@
     <link rel="stylesheet" href="styles.css">
     <script defer src="script.js"></script>
 <script>
+    // Load movie data from JSON file if available, otherwise use fetch API
+    async function loadMoviesData() {
+        try {
+            const response = await fetch('https://tyrelcb.github.io/static_movie_site/movies.json');
+            if (!response.ok) {
+                throw new Error('Failed to load movies.json');
+            }
+            const moviesObject = await response.json();
+            if (moviesObject && moviesObject.movies) {
+                originalMovies = moviesObject.movies;
+                console.log('Movies loaded from JSON file:', moviesObject);
+                resetPagination();
+                filterMovies();
+            }
+        } catch (error) {
+            console.error('Error loading movies.json:', error);
+            // If loading from JSON fails, fetch movies using the API
+            document.getElementById('filterYear').value = currentYear;
+            document.getElementById('loadingModal').style.display = 'flex';
+            const startTime = performance.now();
+            const movies = await processMovies();
+            console.log('Movies fetched:', movies);
+
+            originalMovies = movies;
+            console.log('Movies Object:', { movies });
+
+            originalMovies.sort((a, b) => new Date(b.date_uploaded) - new Date(a.date_uploaded));
+
+            generateMoviePage({ movies });
+            lazyLoad();
+            const endTime = performance.now();
+            const timeTaken = ((endTime - startTime) / 1000).toFixed(2);
+            document.getElementById('loadingTime').textContent = `Time taken: ${timeTaken} seconds`;
+            setTimeout(() => {
+                document.getElementById('loadingModal').style.display = 'none';
+            }, 3000);
+            document.getElementById('movieCount').textContent = `Total Movies: ${movies.length.toLocaleString()}`;
+            filterMovies();
+        }
+    }
+
+    window.addEventListener('load', loadMoviesData);
+</script>
+<script>
     // Function to save movie object to a JSON file
     function saveMoviesToJsonFile() {
         const moviesObject = { movies: originalMovies };
