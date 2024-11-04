@@ -23,7 +23,8 @@
     async function loadMoviesData() {
         try {
             document.getElementById('loadingModal').style.display = 'flex';
-            let url = 'movies.json'
+            // let url = 'movies.json'
+            let url = 'https://tyrelcb.github.io/static_movie_site/movies.json'
             const response = await fetch(url);
             if (!response.ok) {
                 throw new Error('Failed to load movies.json');
@@ -80,12 +81,14 @@
     }, new Date(0));
 
     const currentTime = new Date();
+    currentTime.setHours(currentTime.getHours() + 8);
     const timeDifference = (currentTime - latestUploadDate) / (1000 * 60 * 60); // Time difference in hours
-
+    console.log(timeDifference)
     if (timeDifference > 1) {
         console.log('Fetching latest movies as the last upload was more than an hour ago.');
-        const newMovies = [];
-        await movieGrabber(50, 1, newMovies, 3, 1);
+        // const newMovies = [];
+        // await movieGrabber(50, 2, newMovies, 3, 1);
+        const newMovies = await processMovies();
         newMovies.forEach(movie => {
             if (!originalMovies.some(existingMovie => existingMovie.movie_id === movie.movie_id)) {
                 originalMovies.push(movie);
@@ -798,7 +801,14 @@
                 }
             });
         
-            document.getElementById('movieCount').textContent = `Total Movies: ${filteredMovies.length.toLocaleString()}`;
+            const latestUploadDate = originalMovies.reduce((latest, movie) => {
+                const movieDate = new Date(movie.date_uploaded);
+                return movieDate > latest ? movieDate : latest;
+            }, new Date(0));
+            const currentTime = new Date();
+            currentTime.setHours(currentTime.getHours() + 8);
+            const timeDifference = ((currentTime - latestUploadDate) / (1000 * 60 * 60)).toFixed(1); // Time difference in hours
+            document.getElementById('movieCount').textContent = `Total Movies: ${filteredMovies.length.toLocaleString()} (Last Upload: ${timeDifference} hours ago)`;
             generateMoviePage({ movies: filteredMovies });
             lazyLoad();
         }
