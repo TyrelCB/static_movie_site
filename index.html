@@ -68,7 +68,7 @@
             lazyLoad();
             setTimeout(() => {
                 document.getElementById('loadingModal').style.display = 'none';
-            }, 3000);
+            }, 1000);
             document.getElementById('movieCount').textContent = `Total Movies: ${movies.length.toLocaleString()}`;
             filterMovies();
         }
@@ -90,7 +90,7 @@
         console.log(timeDifference);
         if (timeDifference > 1) {
             console.log('Fetching latest movies as the last upload was more than an hour ago.');
-            const newMovies = await processMovies();
+            const newMovies = await processMovies(5);
             newMovies.forEach(movie => {
                 if (!originalMovies.some(existingMovie => existingMovie.movie_id === movie.movie_id)) {
                     originalMovies.push(movie);
@@ -636,10 +636,12 @@
         }
 
         // Function to process movie pages
-        async function processMovies() {
+        async function processMovies(totalPages = null) {
             console.log('Executing processMovies function');
             const movies = [];
-            const totalPages = await moviePageCount();
+            if (!totalPages) {
+            totalPages = await moviePageCount();
+            }
             const pages = Array.from({ length: totalPages }, (_, i) => i + 1);
 
             const fetchPromises = pages.map(page => movieGrabber(50, page, movies, 3, totalPages));
