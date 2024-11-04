@@ -7,9 +7,25 @@
     <link rel="stylesheet" href="styles.css">
     <script defer src="script.js"></script>
 <script>
+    // Basic interval
+    let loaded = false
+    let load_failed = false
+    const startTime = performance.now();
+    const timer = setInterval(() => {
+        console.log('Timer Running');
+        const endTime = performance.now();
+        const timeTaken = ((endTime - startTime) / 1000).toFixed(1);
+        document.getElementById('loadingTime').textContent = `Time taken: ${timeTaken} seconds`;
+        if (loaded || load_failed) {
+            clearInterval(timer);
+            console.log('Timer stopped');
+        }
+    }, 100);
     // Load movie data from JSON file if available, otherwise use fetch API
     async function loadMoviesData() {
         try {
+            document.getElementById('loadingModal').style.display = 'flex';
+            let url = 'https://tyrelcb.github.io/static_movie_site/movies.json'
             const response = await fetch('/movies.json');
             if (!response.ok) {
                 throw new Error('Failed to load movies.json');
@@ -22,6 +38,9 @@
                 resetPagination();
                 filterMovies();
             }
+            document.getElementById('loadingModal').style.display = 'none';
+            loaded = true
+            
         } catch (error) {
             console.error('Error loading movies.json:', error);
             // If loading from JSON fails, fetch movies using the API
@@ -30,19 +49,21 @@
             const startTime = performance.now();
             const movies = await processMovies();
             console.log('Movies fetched:', movies);
+            if (movies.length == 0) {
+                load_failed = true
+            } else {
+                loaded = true
+            }
 
             originalMovies = movies;
             console.log('Movies Object:', { movies });
-            
+
             // Sort movies by date uploaded by default
             originalMovies.sort((a, b) => new Date(b.date_uploaded) - new Date(a.date_uploaded));
             
             // Generate HTML content
             generateMoviePage({ movies });
             lazyLoad();
-            const endTime = performance.now();
-            const timeTaken = ((endTime - startTime) / 1000).toFixed(2);
-            document.getElementById('loadingTime').textContent = `Time taken: ${timeTaken} seconds`;
             setTimeout(() => {
                 document.getElementById('loadingModal').style.display = 'none';
             }, 3000);
@@ -454,7 +475,7 @@
     <div id="loadingModal" class="modal">
         <div class="modal-content" style="text-align: center;">
             <span id="loadingSpinner" style="display: inline-block; border: 4px solid #39ff14; border-top: 4px solid #000000; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite;"></span>
-            <p id="loadingCount" style="color: #ff007f; margin-top: 20px;">Fetching movies... (0)</p>
+            <p id="loadingCount" style="color: #ff007f; margin-top: 20px;">Fetching movies... </p>
             <div class="progress-bar">
                 <div id="progressBarFill" class="progress-bar-fill"></div>
             </div>
