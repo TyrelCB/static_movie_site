@@ -61,6 +61,7 @@
         <button type="button" id="searchButton">Search</button>
     </form>
     <pre id="output"></pre>
+    <button type="button" id="scraperButton" onclick="startScraper(imdbID);" style="padding: 10px; font-size: 16px; margin-top: 10px; background-color: #bb86fc; color: #121212; border: none; border-radius: 5px; cursor: pointer;">Start Scraper</button>
 
     <script>
         // Build tv_collection_info object
@@ -74,27 +75,27 @@
             log('Search button clicked');
             const show = document.getElementById('searchInput').value.trim();
             if (!show) {
-                document.getElementById('output').textContent = 'Please enter a TV show name.';
-                log('No show name provided');
-                return;
+            document.getElementById('output').textContent = 'Please enter a TV show name.';
+            log('No show name provided');
+            return;
             }
             log(`Searching for show: ${show}`);
             const omdbData = await omdbLookup(show);
             if (omdbData && omdbData.Response !== 'False') {
-                log(`OMDB data found for show: ${omdbData.Title}`);
-                document.getElementById('output').innerHTML = `Title: ${omdbData.Title}<br>
-Year: ${omdbData.Year}<br>
-Genre: ${omdbData.Genre}<br>
-Plot: ${omdbData.Plot}<br>
-IMDB Rating: ${omdbData.imdbRating}<br>
-IMDB ID: ${omdbData.imdbID}<br>
-Rated: ${omdbData.Rated}<br>
-Actors: ${omdbData.Actors}<br><br>
+            log(`OMDB data found for show: ${omdbData.Title}`);
+            document.getElementById('output').innerHTML = `Title: ${omdbData.Title}
+Year: ${omdbData.Year}
+Genre: ${omdbData.Genre}
+Plot: ${omdbData.Plot}
+IMDB Rating: ${omdbData.imdbRating}
+IMDB ID: ${omdbData.imdbID}
+Rated: ${omdbData.Rated}
+Actors: ${omdbData.Actors}
 <img src="${omdbData.Poster}" alt="Poster of ${omdbData.Title}" style="max-width: 200px;">`;
-                await startScraper(omdbData.imdbID);
+            imdbID = omdbData.imdbID
             } else {
-                document.getElementById('output').textContent = 'Show not found in OMDB.';
-                log('Show not found in OMDB');
+            document.getElementById('output').textContent = 'Show not found in OMDB.';
+            log('Show not found in OMDB');
             }
         });
 
@@ -151,8 +152,10 @@ Actors: ${omdbData.Actors}<br><br>
                         const tuple = { title, season, episode, torrent_url, episode_url, seeds, peers, date_released_unix, size_bytes, size_mb: sizeMb, dateReleased, magnet_url };
                         tupLst.push(tuple);
 
-                        // Add this info to the tv_collection object
-                        tv_collection_info.torrents.push(tuple);
+                        // Check for duplicates before adding to the tv_collection_info object
+                        if (!tv_collection_info.torrents.some(torrent => torrent.magnet_url === tuple.magnet_url)) {
+                            tv_collection_info.torrents.push(tuple);
+                        }
                     }
                 } else {
                     log('No torrents found in response or response is undefined');
