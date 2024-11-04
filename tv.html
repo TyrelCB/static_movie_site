@@ -63,29 +63,43 @@
     <pre id="output"></pre>
 
     <script>
+        // Build tv_collection_info object
+        const tv_collection_info = { torrents: [] };
+        
+        function log(message) {
+            console.log(`[LOG] ${new Date().toISOString()} - ${message}`);
+        }
+
         document.getElementById('searchButton').addEventListener('click', async () => {
+            log('Search button clicked');
             const show = document.getElementById('searchInput').value.trim();
             if (!show) {
                 document.getElementById('output').textContent = 'Please enter a TV show name.';
+                log('No show name provided');
                 return;
             }
+            log(`Searching for show: ${show}`);
             const omdbData = await omdbLookup(show);
             if (omdbData && omdbData.Response !== 'False') {
-                document.getElementById('output').innerHTML = `Title: ${omdbData.Title}
-Year: ${omdbData.Year}
-Genre: ${omdbData.Genre}
-Plot: ${omdbData.Plot}
-IMDB Rating: ${omdbData.imdbRating}
-IMDB ID: ${omdbData.imdbID}
-Rated: ${omdbData.Rated}
-Actors: ${omdbData.Actors}
+                log(`OMDB data found for show: ${omdbData.Title}`);
+                document.getElementById('output').innerHTML = `Title: ${omdbData.Title}<br>
+Year: ${omdbData.Year}<br>
+Genre: ${omdbData.Genre}<br>
+Plot: ${omdbData.Plot}<br>
+IMDB Rating: ${omdbData.imdbRating}<br>
+IMDB ID: ${omdbData.imdbID}<br>
+Rated: ${omdbData.Rated}<br>
+Actors: ${omdbData.Actors}<br><br>
 <img src="${omdbData.Poster}" alt="Poster of ${omdbData.Title}" style="max-width: 200px;">`;
+                await startScraper(omdbData.imdbID);
             } else {
                 document.getElementById('output').textContent = 'Show not found in OMDB.';
+                log('Show not found in OMDB');
             }
         });
 
         async function seasonEpisodeFinder(string) {
+            log(`Finding season and episode in string: ${string}`);
             const replaceSpace = (match, season, episode) => {
                 season = season.trim();
                 episode = episode.trim();
@@ -96,47 +110,71 @@ Actors: ${omdbData.Actors}
             string = string.replace(/.+(\sS\d+)(E\d+\s).+/i, replaceSpace);
             const season = string.split(' ')[0].substring(1);
             const episode = string.split(' ')[1].substring(1);
+            log(`Found season: ${season}, episode: ${episode}`);
             return { season, episode };
         }
 
-        async function tvGrabber(limit, page, tupLst, pageErrorLst, imdbId = null, show = null) {
+        async function tvGrabber(limit, page, tupLst, pageErrorLst, imdbId = null) {
+            log(`Grabbing TV torrents, limit: ${limit}, page: ${page}, imdbId: ${imdbId}`);
             let url = 'https://eztvx.to/api/get-torrents?';
             if (imdbId) {
+                imdbId = imdbId.substring(2); // Remove the first two characters from imdbId
                 url += `imdb_id=${imdbId}&limit=${limit}&page=${page}`;
             } else {
                 url += `&limit=${limit}&page=${page}`;
+                return null;
             }
 
             try {
                 const response = await fetch(`${url}`);
                 const r = await response.json();
 
-                if (!r.hasOwnProperty('torrents')) return { tupLst, pageErrorLst };
-
-                for (const i of r.torrents) {
-                    let { magnet_url, title, season, episode, torrent_url, seeds, peers, date_released_unix, size_bytes } = i;
-                    let episode_url = i.episode_url || '';
-
-                    if (season === '0' && episode === '0') {
-                        const result = await seasonEpisodeFinder(title);
-                        season = result.season;
-                        episode = result.episode;
-                    }
-
-                    const dateReleased = new Date(date_released_unix * 1000);
-                    const sizeMb = Math.round((size_bytes / 1024 / 1024) * 100) / 100;
-                    const tuple = { title, season, episode, torrent_url, episode_url, seeds, peers, date_released_unix, size_bytes, size_mb: sizeMb, dateReleased, show, magnet_url };
-                    tupLst.push(tuple);
+                if (!r.hasOwnProperty('torrents')) {
+                    log(`No torrents found on page: ${page}`);
+                    return { tupLst, pageErrorLst };
                 }
+
+                if (r && r.torrents) {
+                    for (const i of r.torrents) {
+                        let { magnet_url, title, season, episode, torrent_url, seeds, peers, date_released_unix, size_bytes } = i;
+                        let episode_url = i.episode_url || '';
+
+                        if (season === '0' && episode === '0') {
+                            log(`Season and episode not found, extracting from title: ${title}`);
+                            const result = await seasonEpisodeFinder(title);
+                            season = result.season;
+                            episode = result.episode;
+                        }
+
+                        const dateReleased = new Date(date_released_unix * 1000);
+                        const sizeMb = Math.round((size_bytes / 1024 / 1024) * 100) / 100;
+                        const tuple = { title, season, episode, torrent_url, episode_url, seeds, peers, date_released_unix, size_bytes, size_mb: sizeMb, dateReleased, magnet_url };
+                        tupLst.push(tuple);
+
+                        // Add this info to the tv_collection object
+                        tv_collection_info.torrents.push(tuple);
+                    }
+                } else {
+                    log('No torrents found in response or response is undefined');
+                }
+
+                
+
+                log(`Collected data for page: ${page}`);
+                console.log(tv_collection_info);
+
             } catch (e) {
+                log(`Error on page: ${page}, adding to error list. Error: ${e.message}`);
                 pageErrorLst.push(page);
             }
             return { tupLst, pageErrorLst };
         }
 
         async function tvCount(imdbId = null) {
+            log(`Counting torrents for imdbId: ${imdbId}`);
             let url = 'https://eztvx.to/api/get-torrents?';
             if (imdbId) {
+                imdbId = imdbId.substring(2); // Remove the first two characters from imdbId
                 url += `imdb_id=${imdbId}`;
             }
 
@@ -144,10 +182,12 @@ Actors: ${omdbData.Actors}
             const r = await response.json();
             const torrentsCount = r.torrents_count;
             const pageCount = Math.floor(torrentsCount / 30) + 1;
+            log(`Total torrents: ${torrentsCount}, Total pages: ${pageCount}`);
             return { torrentsCount, pageCount, imdbId };
         }
 
         async function omdbLookup(title, showType = 'series') {
+            log(`Looking up OMDB for title: ${title}, type: ${showType}`);
             const omdbApiKey = '7f3a9549';
             const params = new URLSearchParams({
                 type: showType,
@@ -156,43 +196,40 @@ Actors: ${omdbData.Actors}
             });
 
             const response = await fetch(`https://cors-anywhere.herokuapp.com/http://www.omdbapi.com/?${params.toString()}`);
-            return await response.json();
+            const result = await response.json();
+            log(`OMDB lookup result: ${JSON.stringify(result)}`);
+            return result;
         }
 
-        async function startScraper(show) {
+        async function startScraper(imdbId) {
+            log(`Starting scraper for imdbId: ${imdbId}`);
             const startTime = new Date();
             document.getElementById('output').textContent = `Start Time: ${startTime}\n`;
 
             let tupLst = [];
             let errorsLst = [];
-
-            const omdbData = await omdbLookup(show);
-            if (!omdbData || omdbData.Response === 'False') {
-                document.getElementById('output').textContent += 'Show not found in OMDB.\n';
-                return;
-            }
-            const imdbId = omdbData.imdbID;
+            
             const { torrentsCount, pageCount } = await tvCount(imdbId);
             document.getElementById('output').textContent += `Torrents Count: ${torrentsCount}\n`;
 
+            const pagePromises = [];
             for (let page = 1; page <= pageCount; page++) {
-                try {
-                    const result = await tvGrabber(30, page, tupLst, errorsLst, imdbId, show);
-                    tupLst = result.tupLst;
-                    errorsLst = result.pageErrorLst;
-                } catch (e) {
-                    console.error(`Failed on page ${page}`, e);
-                    continue;
-                }
-                document.getElementById('output').textContent += `Page: ${page}\n`;
+                log(`Adding page ${page} to promises for primary collection`);
+                pagePromises.push(tvGrabber(30, page, tupLst, errorsLst, imdbId));
             }
+            const results = await Promise.all(pagePromises);
+            results.forEach(result => {
+                tupLst = result.tupLst;
+                errorsLst = result.pageErrorLst;
+            });
             document.getElementById('output').textContent += `Finished primary collection in ${new Date() - startTime}ms\n`;
 
             const secondStartTime = new Date();
             document.getElementById('output').textContent += `Beginning second collection against errored pages: ${errorsLst}\n`;
             let errorsLst2 = [];
             for (const page of errorsLst) {
-                const result = await tvGrabber(30, page, tupLst, errorsLst2, imdbId, show);
+                log(`Retrying errored page: ${page}`);
+                const result = await tvGrabber(30, page, tupLst, errorsLst2, imdbId);
                 tupLst = result.tupLst;
                 errorsLst2 = result.pageErrorLst;
                 document.getElementById('output').textContent += `Collected ${tupLst.length} items\n`;
@@ -216,6 +253,7 @@ Actors: ${omdbData.Actors}
                 magnet_url: item.magnet_url
             }));
 
+            log(`Filtering and sorting collected data`);
             // Filtering and sorting
             const filtered = df.filter(item => item.size_mb < 750 && item.season >= 0 && item.seeds > 0);
             const sorted = filtered.sort((a, b) => (
@@ -226,6 +264,7 @@ Actors: ${omdbData.Actors}
                 .map(key => sorted.find(item => `${item.season}-${item.episode}` === key));
 
             document.getElementById('output').textContent += `Unique Items: ${JSON.stringify(unique, null, 2)}\n`;
+            log(`Scraper finished successfully`);
         }
     </script>
 </body>
