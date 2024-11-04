@@ -7,6 +7,63 @@
     <link rel="stylesheet" href="styles.css">
     <script defer src="script.js"></script>
 <script>
+    // Function to save movie object to a JSON file
+    function saveMoviesToJsonFile() {
+        const moviesObject = { movies: originalMovies };
+        const dataStr = JSON.stringify(moviesObject);
+        const blob = new Blob([dataStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'movies.json';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    }
+
+    // Function to load movie object from a JSON file
+    function loadMoviesFromJsonFile(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const moviesObject = JSON.parse(e.target.result);
+                if (moviesObject && moviesObject.movies) {
+                    originalMovies = moviesObject.movies;
+                    resetPagination();
+                    filterMovies();
+                }
+            } catch (error) {
+                console.error('Error reading JSON file:', error);
+            }
+        };
+        reader.readAsText(file);
+    }
+
+    // Add an input for loading the movie JSON file
+    window.addEventListener('load', function() {
+        const loadInput = document.createElement('input');
+        loadInput.type = 'file';
+        loadInput.accept = 'application/json';
+        loadInput.style.display = 'none';
+        loadInput.addEventListener('change', loadMoviesFromJsonFile);
+        document.body.appendChild(loadInput);
+
+        const loadButton = document.createElement('button');
+        loadButton.textContent = 'Load Movies from JSON';
+        loadButton.onclick = () => loadInput.click();
+        loadButton.style = 'display: block; margin: 20px auto; background-color: #ff007f; color: #ffffff; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; box-shadow: 0 0 20px #00ff00;';
+        document.body.appendChild(loadButton);
+
+        const saveButton = document.createElement('button');
+        saveButton.textContent = 'Save Movies to JSON';
+        saveButton.onclick = saveMoviesToJsonFile;
+        saveButton.style = 'display: block; margin: 20px auto; background-color: #ff007f; color: #ffffff; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; box-shadow: 0 0 20px #00ff00;';
+        document.body.appendChild(saveButton);
+    });
+</script>
+<script>
     window.addEventListener('load', function() {
         if (window.innerWidth < 600) {
             const dropdown = document.getElementById('moviesPerPageDropdown');
