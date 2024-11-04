@@ -4,8 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Movie Database</title>
-    <link rel="stylesheet" href="styles.css">
-    <script defer src="script.js"></script>
 <script>
     // Basic interval
     let loaded = false
@@ -25,8 +23,8 @@
     async function loadMoviesData() {
         try {
             document.getElementById('loadingModal').style.display = 'flex';
-            let url = 'https://tyrelcb.github.io/static_movie_site/movies.json'
-            const response = await fetch('/movies.json');
+            let url = 'movies.json'
+            const response = await fetch(url);
             if (!response.ok) {
                 throw new Error('Failed to load movies.json');
             }
@@ -73,6 +71,31 @@
     }
 
     window.addEventListener('load', loadMoviesData);
+
+    // Set an interval to check for new movies every 30 minutes
+    setInterval(async () => {
+    const latestUploadDate = originalMovies.reduce((latest, movie) => {
+        const movieDate = new Date(movie.date_uploaded);
+        return movieDate > latest ? movieDate : latest;
+    }, new Date(0));
+
+    const currentTime = new Date();
+    const timeDifference = (currentTime - latestUploadDate) / (1000 * 60 * 60); // Time difference in hours
+
+    if (timeDifference > 1) {
+        console.log('Fetching latest movies as the last upload was more than an hour ago.');
+        const newMovies = [];
+        await movieGrabber(50, 1, newMovies, 3, 1);
+        newMovies.forEach(movie => {
+            if (!originalMovies.some(existingMovie => existingMovie.movie_id === movie.movie_id)) {
+                originalMovies.push(movie);
+            }
+        });
+        console.log('New movies added:', newMovies);
+        resetPagination();
+        filterMovies();
+        }
+    }, 30 * 60 * 1000);
 </script>
 <script>
     // Function to save movie object to a JSON file
