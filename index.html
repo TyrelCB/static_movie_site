@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Movie Database</title>
 <script>
-    // Basic interval
+    // Load Timer
     let loaded = false
     let load_failed = false
     const startTime = performance.now();
@@ -18,13 +18,16 @@
             clearInterval(timer);
             console.log('Timer stopped');
         }
+        if (loaded) {
+            checkForNewMovies();
+        }
     }, 100);
     // Load movie data from JSON file if available, otherwise use fetch API
     async function loadMoviesData() {
         try {
             document.getElementById('loadingModal').style.display = 'flex';
-            // let url = 'movies.json'
-            let url = 'https://tyrelcb.github.io/static_movie_site/movies.json'
+            let url = 'movies.json'
+            // let url = 'https://tyrelcb.github.io/static_movie_site/movies.json'
             const response = await fetch(url);
             if (!response.ok) {
                 throw new Error('Failed to load movies.json');
@@ -73,32 +76,35 @@
 
     window.addEventListener('load', loadMoviesData);
 
-    // Set an interval to check for new movies every 30 minutes
-    setInterval(async () => {
-    const latestUploadDate = originalMovies.reduce((latest, movie) => {
-        const movieDate = new Date(movie.date_uploaded);
-        return movieDate > latest ? movieDate : latest;
-    }, new Date(0));
+    // Function to check for new movies
+    async function checkForNewMovies() {
+        console.log('checkForNewMovies function called'); // Added logging
+        const latestUploadDate = originalMovies.reduce((latest, movie) => {
+            const movieDate = new Date(movie.date_uploaded);
+            return movieDate > latest ? movieDate : latest;
+        }, new Date(0));
 
-    const currentTime = new Date();
-    currentTime.setHours(currentTime.getHours() + 8);
-    const timeDifference = (currentTime - latestUploadDate) / (1000 * 60 * 60); // Time difference in hours
-    console.log(timeDifference)
-    if (timeDifference > 1) {
-        console.log('Fetching latest movies as the last upload was more than an hour ago.');
-        // const newMovies = [];
-        // await movieGrabber(50, 2, newMovies, 3, 1);
-        const newMovies = await processMovies();
-        newMovies.forEach(movie => {
-            if (!originalMovies.some(existingMovie => existingMovie.movie_id === movie.movie_id)) {
-                originalMovies.push(movie);
-            }
-        });
-        console.log('New movies added:', newMovies);
-        resetPagination();
-        filterMovies();
+        const currentTime = new Date();
+        currentTime.setHours(currentTime.getHours() + 8);
+        const timeDifference = (currentTime - latestUploadDate) / (1000 * 60 * 60); // Time difference in hours
+        console.log(timeDifference);
+        if (timeDifference > 1) {
+            console.log('Fetching latest movies as the last upload was more than an hour ago.');
+            const newMovies = await processMovies();
+            newMovies.forEach(movie => {
+                if (!originalMovies.some(existingMovie => existingMovie.movie_id === movie.movie_id)) {
+                    originalMovies.push(movie);
+                }
+            });
+            console.log('New movies added:', newMovies);
+            resetPagination();
+            filterMovies();
         }
-    }, 30 * 60 * 1000);
+    }
+
+    // Set an interval to check for new movies every 30 minutes
+    console.log('Setting interval for checkForNewMovies'); // Added logging
+    setInterval(checkForNewMovies, 30 * 60 * 1000); // Corrected interval to 30 minutes
 </script>
 <script>
     // Function to save movie object to a JSON file
