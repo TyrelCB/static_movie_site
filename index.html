@@ -599,9 +599,10 @@
                         seeds: 0,
                         quality: '',
                         movie_id: movie.id,
+                        imdb_id: movie.imdb_code,
                         summary: movie.summary,
                         date_uploaded: movie.date_uploaded || '',
-                        large_cover_image: movie.large_cover_image,
+                        large_cover_image: movie.medium_cover_image,
                         slug: movie.slug,
                         mpa_rating: movie.mpa_rating,
                         language: movie.language
