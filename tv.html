@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TV Torrent Scraper</title>
+    <style>
+        body {
+            background-color: #121212;
+            color: #e0e0e0;
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+        h1 {
+            color: #bb86fc;
+        }
+        #output {
+            background-color: #1e1e1e;
+            border: 1px solid #333;
+            padding: 20px;
+            width: 80%;
+            max-width: 800px;
+            height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.5);
+        }
+        #searchForm {
+            margin-bottom: 20px;
+        }
+        #searchInput {
+            padding: 10px;
+            font-size: 16px;
+            width: 300px;
+            border: none;
+            border-radius: 5px;
+        }
+        #searchButton {
+            padding: 10px;
+            font-size: 16px;
+            margin-left: 10px;
+            background-color: #bb86fc;
+            color: #121212;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1>TV Torrent Scraper</h1>
+    <form id="searchForm">
+        <input type="text" id="searchInput" placeholder="Enter TV show name...">
+        <button type="button" id="searchButton">Search</button>
+    </form>
+    <pre id="output"></pre>
+
+    <script>
+        document.getElementById('searchButton').addEventListener('click', async () => {
+            const show = document.getElementById('searchInput').value.trim();
+            if (!show) {
+                document.getElementById('output').textContent = 'Please enter a TV show name.';
+                return;
+            }
+            const omdbData = await omdbLookup(show);
+            if (omdbData && omdbData.Response !== 'False') {
+                document.getElementById('output').textContent = `Title: ${omdbData.Title}
+Year: ${omdbData.Year}
+Genre: ${omdbData.Genre}
+Plot: ${omdbData.Plot}
+IMDB Rating: ${omdbData.imdbRating}
+`;
+            } else {
+                document.getElementById('output').textContent = 'Show not found in OMDB.';
+            }
+        });
+
+        async function seasonEpisodeFinder(string) {
+            const replaceSpace = (match, season, episode) => {
+                season = season.trim();
+                episode = episode.trim();
+                return `${season} ${episode}`;
+            };
+            
+            // Pull Season and Episode From Title
+            string = string.replace(/.+(\sS\d+)(E\d+\s).+/i, replaceSpace);
+            const season = string.split(' ')[0].substring(1);
+            const episode = string.split(' ')[1].substring(1);
+            return { season, episode };
+        }
+
+        async function tvGrabber(limit, page, tupLst, pageErrorLst, imdbId = null, show = null) {
+            let url = 'https://eztvx.to/api/get-torrents?';
+            if (imdbId) {
+                url += `imdb_id=${imdbId}&limit=${limit}&page=${page}`;
+            } else {
+                url += `&limit=${limit}&page=${page}`;
+            }
+
+            try {
+                const response = await fetch(`${url}`);
+                const r = await response.json();
+
+                if (!r.hasOwnProperty('torrents')) return { tupLst, pageErrorLst };
+
+                for (const i of r.torrents) {
+                    let { magnet_url, title, season, episode, torrent_url, seeds, peers, date_released_unix, size_bytes } = i;
+                    let episode_url = i.episode_url || '';
+
+                    if (season === '0' && episode === '0') {
+                        const result = await seasonEpisodeFinder(title);
+                        season = result.season;
+                        episode = result.episode;
+                    }
+
+                    const dateReleased = new Date(date_released_unix * 1000);
+                    const sizeMb = Math.round((size_bytes / 1024 / 1024) * 100) / 100;
+                    const tuple = { title, season, episode, torrent_url, episode_url, seeds, peers, date_released_unix, size_bytes, size_mb: sizeMb, dateReleased, show, magnet_url };
+                    tupLst.push(tuple);
+                }
+            } catch (e) {
+                pageErrorLst.push(page);
+            }
+            return { tupLst, pageErrorLst };
+        }
+
+        async function tvCount(imdbId = null) {
+            let url = 'https://eztvx.to/api/get-torrents?';
+            if (imdbId) {
+                url += `imdb_id=${imdbId}`;
+            }
+
+            const response = await fetch(url);
+            const r = await response.json();
+            const torrentsCount = r.torrents_count;
+            const pageCount = Math.floor(torrentsCount / 30) + 1;
+            return { torrentsCount, pageCount, imdbId };
+        }
+
+        async function omdbLookup(title, showType = 'series') {
+            const omdbApiKey = '7f3a9549';
+            const params = new URLSearchParams({
+                type: showType,
+                apikey: omdbApiKey,
+                t: title
+            });
+
+            const response = await fetch(`https://cors-anywhere.herokuapp.com/http://www.omdbapi.com/?${params.toString()}`);
+            return await response.json();
+        }
+
+        async function startScraper(show) {
+            const startTime = new Date();
+            document.getElementById('output').textContent = `Start Time: ${startTime}\n`;
+
+            let tupLst = [];
+            let errorsLst = [];
+
+            const omdbData = await omdbLookup(show);
+            if (!omdbData || omdbData.Response === 'False') {
+                document.getElementById('output').textContent += 'Show not found in OMDB.\n';
+                return;
+            }
+            const imdbId = omdbData.imdbID;
+            const { torrentsCount, pageCount } = await tvCount(imdbId);
+            document.getElementById('output').textContent += `Torrents Count: ${torrentsCount}\n`;
+
+            for (let page = 1; page <= pageCount; page++) {
+                try {
+                    const result = await tvGrabber(30, page, tupLst, errorsLst, imdbId, show);
+                    tupLst = result.tupLst;
+                    errorsLst = result.pageErrorLst;
+                } catch (e) {
+                    console.error(`Failed on page ${page}`, e);
+                    continue;
+                }
+                document.getElementById('output').textContent += `Page: ${page}\n`;
+            }
+            document.getElementById('output').textContent += `Finished primary collection in ${new Date() - startTime}ms\n`;
+
+            const secondStartTime = new Date();
+            document.getElementById('output').textContent += `Beginning second collection against errored pages: ${errorsLst}\n`;
+            let errorsLst2 = [];
+            for (const page of errorsLst) {
+                const result = await tvGrabber(30, page, tupLst, errorsLst2, imdbId, show);
+                tupLst = result.tupLst;
+                errorsLst2 = result.pageErrorLst;
+                document.getElementById('output').textContent += `Collected ${tupLst.length} items\n`;
+            }
+            document.getElementById('output').textContent += `Finished second collection in ${new Date() - secondStartTime}ms\n`;
+
+            // Create Dataframe equivalent
+            const df = tupLst.map(item => ({
+                title: item.title,
+                season: parseInt(item.season),
+                episode: parseInt(item.episode),
+                torrent_url: item.torrent_url,
+                episode_url: item.episode_url,
+                seeds: item.seeds,
+                peers: item.peers,
+                date_released_unix: item.date_released_unix,
+                size_bytes: parseInt(item.size_bytes),
+                size_mb: parseFloat(item.size_mb),
+                dateReleased: item.dateReleased,
+                show: item.show,
+                magnet_url: item.magnet_url
+            }));
+
+            // Filtering and sorting
+            const filtered = df.filter(item => item.size_mb < 750 && item.season >= 0 && item.seeds > 0);
+            const sorted = filtered.sort((a, b) => (
+                a.season - b.season || a.episode - b.episode || a.seeds - b.seeds || a.size_mb - b.size_mb
+            ));
+
+            const unique = Array.from(new Set(sorted.map(item => `${item.season}-${item.episode}`)))
+                .map(key => sorted.find(item => `${item.season}-${item.episode}` === key));
+
+            document.getElementById('output').textContent += `Unique Items: ${JSON.stringify(unique, null, 2)}\n`;
+        }
+    </script>
+</body>
+</html>
