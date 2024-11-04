@@ -71,7 +71,7 @@
             }
             const omdbData = await omdbLookup(show);
             if (omdbData && omdbData.Response !== 'False') {
-                document.getElementById('output').textContent = `Title: ${omdbData.Title}
+                document.getElementById('output').innerHTML = `Title: ${omdbData.Title}
 Year: ${omdbData.Year}
 Genre: ${omdbData.Genre}
 Plot: ${omdbData.Plot}
@@ -79,7 +79,7 @@ IMDB Rating: ${omdbData.imdbRating}
 IMDB ID: ${omdbData.imdbID}
 Rated: ${omdbData.Rated}
 Actors: ${omdbData.Actors}
-`;
+<img src="${omdbData.Poster}" alt="Poster of ${omdbData.Title}" style="max-width: 200px;">`;
             } else {
                 document.getElementById('output').textContent = 'Show not found in OMDB.';
             }
