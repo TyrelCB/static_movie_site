@@ -52,6 +52,22 @@
             border-radius: 5px;
             cursor: pointer;
         }
+        table {
+            margin-top: 20px;
+            border-collapse: collapse;
+            width: 80%;
+            max-width: 800px;
+            background-color: #1e1e1e;
+            color: #e0e0e0;
+        }
+        th, td {
+            border: 1px solid #333;
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background-color: #bb86fc;
+        }
     </style>
 </head>
 <body>
@@ -62,6 +78,9 @@
     </form>
     <pre id="output"></pre>
     <button type="button" id="scraperButton" onclick="startScraper(imdbID);" style="padding: 10px; font-size: 16px; margin-top: 10px; background-color: #bb86fc; color: #121212; border: none; border-radius: 5px; cursor: pointer;">Start Scraper</button>
+
+    <div id="tableContainer"></div>
+    <button type="button" id="downloadUniqueButton" onclick="downloadUniqueTorrents();" style="padding: 10px; font-size: 16px; margin-top: 10px; background-color: #bb86fc; color: #121212; border: none; border-radius: 5px; cursor: pointer;">Download All Unique Torrents</button>
 
     <script>
         // Build tv_collection_info object
@@ -75,15 +94,15 @@
             log('Search button clicked');
             const show = document.getElementById('searchInput').value.trim();
             if (!show) {
-            document.getElementById('output').textContent = 'Please enter a TV show name.';
-            log('No show name provided');
-            return;
+                document.getElementById('output').textContent = 'Please enter a TV show name.';
+                log('No show name provided');
+                return;
             }
             log(`Searching for show: ${show}`);
             const omdbData = await omdbLookup(show);
             if (omdbData && omdbData.Response !== 'False') {
-            log(`OMDB data found for show: ${omdbData.Title}`);
-            document.getElementById('output').innerHTML = `Title: ${omdbData.Title}
+                log(`OMDB data found for show: ${omdbData.Title}`);
+                document.getElementById('output').innerHTML = `Title: ${omdbData.Title}
 Year: ${omdbData.Year}
 Genre: ${omdbData.Genre}
 Plot: ${omdbData.Plot}
@@ -92,10 +111,10 @@ IMDB ID: ${omdbData.imdbID}
 Rated: ${omdbData.Rated}
 Actors: ${omdbData.Actors}
 <img src="${omdbData.Poster}" alt="Poster of ${omdbData.Title}" style="max-width: 200px;">`;
-            imdbID = omdbData.imdbID
+                imdbID = omdbData.imdbID
             } else {
-            document.getElementById('output').textContent = 'Show not found in OMDB.';
-            log('Show not found in OMDB');
+                document.getElementById('output').textContent = 'Show not found in OMDB.';
+                log('Show not found in OMDB');
             }
         });
 
@@ -207,40 +226,40 @@ Actors: ${omdbData.Actors}
         async function startScraper(imdbId) {
             log(`Starting scraper for imdbId: ${imdbId}`);
             const startTime = new Date();
-            document.getElementById('output').textContent = `Start Time: ${startTime}\n`;
+            console.log(`Start Time: ${startTime}`);
 
             let tupLst = [];
             let errorsLst = [];
             
             const { torrentsCount, pageCount } = await tvCount(imdbId);
-            document.getElementById('output').textContent += `Torrents Count: ${torrentsCount}\n`;
+            console.log(`Torrents Count: ${torrentsCount}`);
 
             const pagePromises = [];
             for (let page = 1; page <= pageCount; page++) {
-                log(`Adding page ${page} to promises for primary collection`);
-                pagePromises.push(tvGrabber(30, page, tupLst, errorsLst, imdbId));
+            log(`Adding page ${page} to promises for primary collection`);
+            pagePromises.push(tvGrabber(30, page, tupLst, errorsLst, imdbId));
             }
             const results = await Promise.all(pagePromises);
             results.forEach(result => {
-                tupLst = result.tupLst;
-                errorsLst = result.pageErrorLst;
+            tupLst = result.tupLst;
+            errorsLst = result.pageErrorLst;
             });
-            document.getElementById('output').textContent += `Finished primary collection in ${new Date() - startTime}ms\n`;
+            console.log(`Finished primary collection in ${new Date() - startTime}ms`);
 
             const secondStartTime = new Date();
-            document.getElementById('output').textContent += `Beginning second collection against errored pages: ${errorsLst}\n`;
+            console.log(`Beginning second collection against errored pages: ${errorsLst}`);
             let errorsLst2 = [];
             for (const page of errorsLst) {
-                log(`Retrying errored page: ${page}`);
-                const result = await tvGrabber(30, page, tupLst, errorsLst2, imdbId);
-                tupLst = result.tupLst;
-                errorsLst2 = result.pageErrorLst;
-                document.getElementById('output').textContent += `Collected ${tupLst.length} items\n`;
+            log(`Retrying errored page: ${page}`);
+            const result = await tvGrabber(30, page, tupLst, errorsLst2, imdbId);
+            tupLst = result.tupLst;
+            errorsLst2 = result.pageErrorLst;
+            console.log(`Collected ${tupLst.length} items`);
             }
-            document.getElementById('output').textContent += `Finished second collection in ${new Date() - secondStartTime}ms\n`;
+            console.log(`Finished second collection in ${new Date() - secondStartTime}ms`);
 
             // Create Dataframe equivalent
-            const df = tupLst.map(item => ({
+            df = tupLst.map(item => ({
                 title: item.title,
                 season: parseInt(item.season),
                 episode: parseInt(item.episode),
@@ -266,8 +285,88 @@ Actors: ${omdbData.Actors}
             const unique = Array.from(new Set(sorted.map(item => `${item.season}-${item.episode}`)))
                 .map(key => sorted.find(item => `${item.season}-${item.episode}` === key));
 
-            document.getElementById('output').textContent += `Unique Items: ${JSON.stringify(unique, null, 2)}\n`;
+            // document.getElementById('output').textContent += `Unique Items: ${JSON.stringify(unique, null, 2)}\n`;
             log(`Scraper finished successfully`);
+
+            generateTable(unique);
+        }
+
+        function generateTable(data) {
+            log('Generating table of TV collection results');
+            const tableContainer = document.getElementById('tableContainer');
+            const table = document.createElement('table');
+            const thead = document.createElement('thead');
+            const tbody = document.createElement('tbody');
+
+            // Create table headers
+            const headers = ['Title', 'Season', 'Episode', 'Date Released', 'Magnet URL'];
+            const tr = document.createElement('tr');
+            headers.forEach(header => {
+                const th = document.createElement('th');
+                th.textContent = header;
+                tr.appendChild(th);
+            });
+            thead.appendChild(tr);
+
+            // Create table rows
+            data.forEach(item => {
+                const tr = document.createElement('tr');
+                const cells = [
+                    item.title,
+                    item.season,
+                    item.episode,
+                    // item.torrent_url,
+                    // item.seeds,
+                    // item.peers,
+                    // item.size_mb,
+                    item.dateReleased.toDateString(),
+                    item.magnet_url
+                ];
+                cells.forEach(cellData => {
+                    const td = document.createElement('td');
+                    if (cellData && typeof cellData === 'string' && cellData.startsWith('magnet:')) {
+                        const link = document.createElement('a');
+                        link.href = cellData;
+                        link.textContent = 'Magnet Link';
+                        link.target = '_blank';
+                        td.appendChild(link);
+                    } else {
+                        td.textContent = cellData;
+                    }
+                    tr.appendChild(td);
+                });
+                tbody.appendChild(tr);
+            });
+
+            table.appendChild(thead);
+            table.appendChild(tbody);
+            tableContainer.innerHTML = ''; // Clear previous table if exists
+            tableContainer.appendChild(table);
+        }
+    function downloadUniqueTorrents() {
+            log('Downloading all unique torrents from the table');
+            const uniqueTorrents = tv_collection_info.torrents.filter((item, index, self) => 
+                index === self.findIndex((t) => (
+                    t.season === item.season && t.episode === item.episode
+                ))
+            );
+            if (uniqueTorrents.length === 0) {
+                alert('No unique torrents available to download.');
+                return;
+            }
+
+            uniqueTorrents.forEach((item, index) => {
+                if (item.torrent_url) {
+                    setTimeout(() => {
+                        const link = document.createElement('a');
+                        link.href = item.torrent_url;
+                        link.download = '';
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                    }, index * 1000); // Adding a delay of 1 second between each download
+                }
+            });
         }
     </script>
 </body>
