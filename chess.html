@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Client-side Chess Game</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f0f0f0;
+        }
+        #chessboard {
+            display: grid;
+            grid-template-columns: repeat(8, 60px);
+            grid-template-rows: repeat(8, 60px);
+            border: 2px solid #333;
+        }
+        .tile {
+            width: 60px;
+            height: 60px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 36px;
+        }
+        .light {
+            background-color: #eeeed2;
+        }
+        .dark {
+            background-color: #769656;
+        }
+        .selected {
+            outline: 3px solid red;
+        }
+        .valid-move {
+            background-color: lightgreen !important;
+        }
+        #status {
+            margin-bottom: 20px;
+            font-size: 24px;
+        }
+    </style>
+</head>
+<body>
+    <div id="status">Turn: White | Move Count: 0</div>
+    <div id="chessboard"></div>
+    <script>
+        const boardElement = document.getElementById('chessboard');
+        const statusElement = document.getElementById('status');
+        const initialBoard = [
+            ["♜", "♞", "♝", "♛", "♚", "♝", "♞", "♜"],
+            ["♟", "♟", "♟", "♟", "♟", "♟", "♟", "♟"],
+            ["", "", "", "", "", "", "", ""],
+            ["", "", "", "", "", "", "", ""],
+            ["", "", "", "", "", "", "", ""],
+            ["", "", "", "", "", "", "", ""],
+            ["♙", "♙", "♙", "♙", "♙", "♙", "♙", "♙"],
+            ["♖", "♘", "♗", "♕", "♔", "♗", "♘", "♖"],
+        ];
+
+        let currentTurn = "white";
+        let moveCount = 0;
+        let enPassantTarget = null;
+
+        function createChessboard() {
+            boardElement.innerHTML = '';
+            for (let row = 0; row < 8; row++) {
+                for (let col = 0; col < 8; col++) {
+                    const tile = document.createElement('div');
+                    tile.classList.add('tile');
+                    tile.classList.add((row + col) % 2 === 0 ? 'light' : 'dark');
+                    tile.dataset.row = row;
+                    tile.dataset.col = col;
+                    tile.textContent = initialBoard[row][col];
+                    boardElement.appendChild(tile);
+                }
+            }
+        }
+
+        createChessboard();
+
+        let selectedPiece = null;
+        boardElement.addEventListener('click', (e) => {
+            const target = e.target;
+            if (!target.classList.contains('tile')) return;
+
+            const row = parseInt(target.dataset.row);
+            const col = parseInt(target.dataset.col);
+            const piece = initialBoard[row][col];
+
+            if (selectedPiece) {
+                // Validate the move based on the piece type
+                if (isValidMove(selectedPiece, row, col)) {
+                    // Handle en passant capture
+                    if (enPassantTarget && row === enPassantTarget.row && col === enPassantTarget.col) {
+                        initialBoard[selectedPiece.row][col] = "";
+                    }
+                    // Move the selected piece
+                    initialBoard[row][col] = selectedPiece.piece;
+                    initialBoard[selectedPiece.row][selectedPiece.col] = "";
+                    // Set en passant target
+                    if ((selectedPiece.piece === "♙" && selectedPiece.row === 6 && row === 4) ||
+                        (selectedPiece.piece === "♟" && selectedPiece.row === 1 && row === 3)) {
+                        enPassantTarget = { row: (selectedPiece.row + row) / 2, col };
+                    } else {
+                        enPassantTarget = null;
+                    }
+                    selectedPiece = null;
+                    createChessboard();
+                    clearHighlights();
+                    // Switch turn
+                    currentTurn = currentTurn === "white" ? "black" : "white";
+                    moveCount++;
+                    updateStatus();
+                } else {
+                    // Allow selecting another piece if no valid moves are available
+                    if (piece !== "" && !isSameColor(selectedPiece.piece, piece) && isCorrectTurn(piece)) {
+                        clearHighlights();
+                        document.querySelector(`[data-row='${selectedPiece.row}'][data-col='${selectedPiece.col}']`).classList.remove('selected');
+                        selectedPiece = { piece, row, col };
+                        target.classList.add('selected');
+                        highlightValidMoves(selectedPiece);
+                    } else {
+                        alert("Invalid move");
+                    }
+                }
+            } else if (piece !== "" && isCorrectTurn(piece)) {
+                // Select a piece if it is the correct turn
+                if (selectedPiece) {
+                    document.querySelector(`[data-row='${selectedPiece.row}'][data-col='${selectedPiece.col}']`).classList.remove('selected');
+                }
+                selectedPiece = { piece, row, col };
+                target.classList.add('selected');
+                highlightValidMoves(selectedPiece);
+            }
+        });
+
+        function isValidMove(selectedPiece, targetRow, targetCol) {
+            const { piece, row, col } = selectedPiece;
+            const deltaRow = targetRow - row;
+            const deltaCol = targetCol - col;
+
+            // Prevent moving to a square occupied by a piece of the same color
+            if (isSameColor(piece, initialBoard[targetRow][targetCol])) {
+                return false;
+            }
+
+            switch (piece) {
+                case "♙": // White Pawn
+                    if (deltaRow === -1 && deltaCol === 0 && initialBoard[targetRow][targetCol] === "") {
+                        return true;
+                    }
+                    if (row === 6 && deltaRow === -2 && deltaCol === 0 && initialBoard[targetRow][targetCol] === "" && initialBoard[row - 1][col] === "") {
+                        return true;
+                    }
+                    if (deltaRow === -1 && Math.abs(deltaCol) === 1 && (isOpponentPiece(piece, initialBoard[targetRow][targetCol]) || (enPassantTarget && targetRow === enPassantTarget.row && targetCol === enPassantTarget.col))) {
+                        return true;
+                    }
+                    return false;
+                case "♟": // Black Pawn
+                    if (deltaRow === 1 && deltaCol === 0 && initialBoard[targetRow][targetCol] === "") {
+                        return true;
+                    }
+                    if (row === 1 && deltaRow === 2 && deltaCol === 0 && initialBoard[targetRow][targetCol] === "" && initialBoard[row + 1][col] === "") {
+                        return true;
+                    }
+                    if (deltaRow === 1 && Math.abs(deltaCol) === 1 && (isOpponentPiece(piece, initialBoard[targetRow][targetCol]) || (enPassantTarget && targetRow === enPassantTarget.row && targetCol === enPassantTarget.col))) {
+                        return true;
+                    }
+                    return false;
+                case "♖": // White Rook
+                case "♜": // Black Rook
+                    return (deltaRow === 0 || deltaCol === 0) && isPathClear(row, col, targetRow, targetCol);
+                case "♘": // White Knight
+                case "♞": // Black Knight
+                    return (Math.abs(deltaRow) === 2 && Math.abs(deltaCol) === 1) || (Math.abs(deltaRow) === 1 && Math.abs(deltaCol) === 2);
+                case "♗": // White Bishop
+                case "♝": // Black Bishop
+                    return Math.abs(deltaRow) === Math.abs(deltaCol) && isPathClear(row, col, targetRow, targetCol);
+                case "♕": // White Queen
+                case "♛": // Black Queen
+                    return (deltaRow === 0 || deltaCol === 0 || Math.abs(deltaRow) === Math.abs(deltaCol)) && isPathClear(row, col, targetRow, targetCol);
+                case "♔": // White King
+                case "♚": // Black King
+                    return Math.abs(deltaRow) <= 1 && Math.abs(deltaCol) <= 1;
+                default:
+                    return false;
+            }
+        }
+
+        function isPathClear(startRow, startCol, endRow, endCol) {
+            const stepRow = startRow < endRow ? 1 : startRow > endRow ? -1 : 0;
+            const stepCol = startCol < endCol ? 1 : startCol > endCol ? -1 : 0;
+            let currentRow = startRow + stepRow;
+            let currentCol = startCol + stepCol;
+
+            while (currentRow !== endRow || currentCol !== endCol) {
+                if (initialBoard[currentRow][currentCol] !== "") {
+                    return false;
+                }
+                currentRow += stepRow;
+                currentCol += stepCol;
+            }
+
+            return true;
+        }
+
+        function isSameColor(piece1, piece2) {
+            if (piece1 === "" || piece2 === "") return false;
+            const whitePieces = "♔♕♖♗♘♙";
+            const blackPieces = "♚♛♜♝♞♟";
+            return (whitePieces.includes(piece1) && whitePieces.includes(piece2)) || (blackPieces.includes(piece1) && blackPieces.includes(piece2));
+        }
+
+        function isOpponentPiece(piece, targetPiece) {
+            if (targetPiece === "") return false;
+            return !isSameColor(piece, targetPiece);
+        }
+
+        function isCorrectTurn(piece) {
+            const whitePieces = "♔♕♖♗♘♙";
+            const blackPieces = "♚♛♜♝♞♟";
+            return (currentTurn === "white" && whitePieces.includes(piece)) || (currentTurn === "black" && blackPieces.includes(piece));
+        }
+
+        function highlightValidMoves(selectedPiece) {
+            for (let row = 0; row < 8; row++) {
+                for (let col = 0; col < 8; col++) {
+                    if (isValidMove(selectedPiece, row, col)) {
+                        const tile = document.querySelector(`[data-row='${row}'][data-col='${col}']`);
+                        tile.classList.add('valid-move');
+                    }
+                }
+            }
+        }
+
+        function clearHighlights() {
+            document.querySelectorAll('.valid-move').forEach(tile => {
+                tile.classList.remove('valid-move');
+            });
+        }
+
+        function updateStatus() {
+            statusElement.textContent = `Turn: ${currentTurn.charAt(0).toUpperCase() + currentTurn.slice(1)} | Move Count: ${moveCount}`;
+        }
+    </script>
+</body>
+</html>
