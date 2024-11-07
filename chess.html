@@ -102,7 +102,7 @@
                     // Move the selected piece
                     initialBoard[row][col] = selectedPiece.piece;
                     initialBoard[selectedPiece.row][selectedPiece.col] = "";
-                    // Set en passant target
+                    // Set enPassant target
                     if ((selectedPiece.piece === "♙" && selectedPiece.row === 6 && row === 4) ||
                         (selectedPiece.piece === "♟" && selectedPiece.row === 1 && row === 3)) {
                         enPassantTarget = { row: (selectedPiece.row + row) / 2, col };
@@ -116,6 +116,16 @@
                     currentTurn = currentTurn === "white" ? "black" : "white";
                     moveCount++;
                     updateStatus();
+
+                    // Check for check
+                    if (isKingInCheck(currentTurn)) {
+                        alert(`${currentTurn.charAt(0).toUpperCase() + currentTurn.slice(1)} is in check!`);
+                    }
+
+                    // Check for checkmate
+                    if (isCheckmate(currentTurn)) {
+                        alert(`${currentTurn.charAt(0).toUpperCase() + currentTurn.slice(1)} is in checkmate. Game over!`);
+                    }
                 } else {
                     // Allow selecting another piece if no valid moves are available
                     if (piece !== "" && !isSameColor(selectedPiece.piece, piece) && isCorrectTurn(piece)) {
@@ -246,6 +256,94 @@
 
         function updateStatus() {
             statusElement.textContent = `Turn: ${currentTurn.charAt(0).toUpperCase() + currentTurn.slice(1)} | Move Count: ${moveCount}`;
+        }
+
+        function isCheckmate(turn) {
+            const kingPiece = turn === "white" ? "♔" : "♚";
+            let kingPosition = null;
+
+            // Find the king's position
+            for (let row = 0; row < 8; row++) {
+                for (let col = 0; col < 8; col++) {
+                    if (initialBoard[row][col] === kingPiece) {
+                        kingPosition = { row, col };
+                        break;
+                    }
+                }
+                if (kingPosition) break;
+            }
+
+            if (!kingPosition) return false;
+
+            // Check if any move can prevent checkmate
+            for (let row = 0; row < 8; row++) {
+                for (let col = 0; col < 8; col++) {
+                    const piece = initialBoard[row][col];
+                    if (piece !== "" && isCorrectTurn(piece)) {
+                        selectedPiece = { piece, row, col };
+                        for (let targetRow = 0; targetRow < 8; targetRow++) {
+                            for (let targetCol = 0; targetCol < 8; targetCol++) {
+                                if (isValidMove(selectedPiece, targetRow, targetCol)) {
+                                    // Temporarily make the move
+                                    const originalPiece = initialBoard[targetRow][targetCol];
+                                    initialBoard[targetRow][targetCol] = piece;
+                                    initialBoard[row][col] = "";
+
+                                    // Check if the king is still in check
+                                    const inCheck = isKingInCheck(turn);
+
+                                    // Undo the move
+                                    initialBoard[row][col] = piece;
+                                    initialBoard[targetRow][targetCol] = originalPiece;
+
+                                    if (!inCheck) {
+                                        selectedPiece = null;
+                                        return false;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            selectedPiece = null;
+            return true;
+        }
+
+        function isKingInCheck(turn) {
+            const kingPiece = turn === "white" ? "♔" : "♚";
+            let kingPosition = null;
+
+            // Find the king's position
+            for (let row = 0; row < 8; row++) {
+                for (let col = 0; col < 8; col++) {
+                    if (initialBoard[row][col] === kingPiece) {
+                        kingPosition = { row, col };
+                        break;
+                    }
+                }
+                if (kingPosition) break;
+            }
+
+            if (!kingPosition) return false;
+
+            // Check if any opponent piece can attack the king
+            for (let row = 0; row < 8; row++) {
+                for (let col = 0; col < 8; col++) {
+                    const piece = initialBoard[row][col];
+                    if (piece !== "" && !isCorrectTurn(piece)) {
+                        selectedPiece = { piece, row, col };
+                        if (isValidMove(selectedPiece, kingPosition.row, kingPosition.col)) {
+                            selectedPiece = null;
+                            return true;
+                        }
+                    }
+                }
+            }
+
+            selectedPiece = null;
+            return false;
         }
     </script>
 </body>
