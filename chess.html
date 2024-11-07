@@ -128,7 +128,7 @@
                     }
                 } else {
                     // Allow selecting another piece if no valid moves are available
-                    if (piece !== "" && !isSameColor(selectedPiece.piece, piece) && isCorrectTurn(piece)) {
+                    if (piece !== "" && isCorrectTurn(piece)) {
                         clearHighlights();
                         document.querySelector(`[data-row='${selectedPiece.row}'][data-col='${selectedPiece.col}']`).classList.remove('selected');
                         selectedPiece = { piece, row, col };
@@ -136,6 +136,8 @@
                         highlightValidMoves(selectedPiece);
                     } else {
                         alert("Invalid move");
+                        selectedPiece = null;
+                        clearHighlights();
                     }
                 }
             } else if (piece !== "" && isCorrectTurn(piece)) {
