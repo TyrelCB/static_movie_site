@@ -92,11 +92,16 @@
             const col = parseInt(target.dataset.col);
             const piece = initialBoard[row][col];
 
+            console.log(`Clicked tile at row ${row}, col ${col}, piece: "${piece}"`);
+
             if (selectedPiece) {
                 // Validate the move based on the piece type
                 if (isValidMove(selectedPiece, row, col)) {
+                    console.log(`Moving ${selectedPiece.piece} from (${selectedPiece.row},${selectedPiece.col}) to (${row},${col})`);
+                    
                     // Handle en passant capture
                     if (enPassantTarget && row === enPassantTarget.row && col === enPassantTarget.col) {
+                        console.log('En passant capture executed');
                         initialBoard[selectedPiece.row][col] = "";
                     }
                     // Move the selected piece
@@ -116,17 +121,25 @@
                     currentTurn = currentTurn === "white" ? "black" : "white";
                     moveCount++;
                     updateStatus();
+                    console.log(`Turn changed to ${currentTurn}, move count: ${moveCount}`);
 
                     // Check for check
                     if (isKingInCheck(currentTurn)) {
+                        console.log(`${currentTurn} king is in check!`);
                         alert(`${currentTurn.charAt(0).toUpperCase() + currentTurn.slice(1)} is in check!`);
+                        kingInCheck = true;
+                    } else {
+                        kingInCheck = false;
                     }
 
                     // Check for checkmate
                     if (isCheckmate(currentTurn)) {
+                        console.log(`${currentTurn} king is in checkmate! Game Over!`);
                         alert(`${currentTurn.charAt(0).toUpperCase() + currentTurn.slice(1)} is in checkmate. Game over!`);
+                        checkMate = true;
                     }
                 } else {
+                    console.log(`Invalid move attempted from (${selectedPiece.row},${selectedPiece.col}) to (${row},${col})`);
                     // Allow selecting another piece if no valid moves are available
                     if (piece !== "" && isCorrectTurn(piece)) {
                         clearHighlights();
@@ -141,6 +154,7 @@
                     }
                 }
             } else if (piece !== "" && isCorrectTurn(piece)) {
+                console.log(`Selected piece ${piece} at (${row},${col})`);
                 // Select a piece if it is the correct turn
                 if (selectedPiece) {
                     document.querySelector(`[data-row='${selectedPiece.row}'][data-col='${selectedPiece.col}']`).classList.remove('selected');
@@ -152,6 +166,7 @@
         });
 
         function isValidMove(selectedPiece, targetRow, targetCol) {
+            console.log(`Validating move for ${selectedPiece.piece} to (${targetRow},${targetCol})`);
             const { piece, row, col } = selectedPiece;
             const deltaRow = targetRow - row;
             const deltaCol = targetCol - col;
@@ -261,6 +276,7 @@
         }
 
         function isCheckmate(turn) {
+            console.log(`Checking if ${turn} king is in checkmate`);
             const kingPiece = turn === "white" ? "♔" : "♚";
             let kingPosition = null;
 
@@ -314,6 +330,7 @@
         }
 
         function isKingInCheck(turn) {
+            console.log(`Checking if ${turn} king is in check`);
             const kingPiece = turn === "white" ? "♔" : "♚";
             let kingPosition = null;
 
