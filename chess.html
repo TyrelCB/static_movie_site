@@ -26,6 +26,7 @@
             justify-content: center;
             align-items: center;
             font-size: 36px;
+            position: relative;
         }
         .light {
             background-color: #eeeed2;
@@ -42,6 +43,13 @@
         #status {
             margin-bottom: 20px;
             font-size: 24px;
+        }
+        .debug-label {
+            position: absolute;
+            font-size: 12px;
+            color: red;
+            pointer-events: none;
+            font-family: monospace;
         }
     </style>
 </head>
@@ -62,6 +70,8 @@
             ["♖", "♘", "♗", "♕", "♔", "♗", "♘", "♖"],
         ];
 
+        const DEBUG_MODE = true;
+
         let currentTurn = "white";
         let moveCount = 0;
         let enPassantTarget = null;
@@ -77,6 +87,14 @@
                     tile.dataset.row = row;
                     tile.dataset.col = col;
                     tile.textContent = initialBoard[row][col];
+                    
+                    if (DEBUG_MODE) {
+                        const label = document.createElement('div');
+                        label.classList.add('debug-label');
+                        label.textContent = `${row},${col}`;
+                        tile.appendChild(label);
+                    }
+                    
                     boardElement.appendChild(tile);
                 }
             }
