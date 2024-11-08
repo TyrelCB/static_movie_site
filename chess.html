@@ -11,7 +11,7 @@
             justify-content: center;
             align-items: center;
             height: 100vh;
-            background-color: #f0f0f0;
+            background-color: #4f7480;
         }
         #chessboard {
             display: grid;
@@ -65,6 +65,7 @@
         let currentTurn = "white";
         let moveCount = 0;
         let enPassantTarget = null;
+        let kingInCheck = false;
 
         function createChessboard() {
             boardElement.innerHTML = '';
@@ -148,7 +149,11 @@
                         target.classList.add('selected');
                         highlightValidMoves(selectedPiece);
                     } else {
-                        alert("Invalid move");
+                        if (kingInCheck) {
+                            alert("Invalid move - king is in check! You must move to protect the king.");
+                        } else {
+                            alert("Invalid move");
+                        }
                         selectedPiece = null;
                         clearHighlights();
                     }
@@ -168,6 +173,28 @@
         function isValidMove(selectedPiece, targetRow, targetCol) {
             console.log(`Validating move for ${selectedPiece.piece} to (${targetRow},${targetCol})`);
             const { piece, row, col } = selectedPiece;
+
+            // If king is in check, verify if this move will get king out of check
+            if (kingInCheck) {
+                // Temporarily make the move
+                const originalPiece = initialBoard[targetRow][targetCol];
+                initialBoard[targetRow][targetCol] = piece;
+                initialBoard[row][col] = "";
+
+                // Check if the king is still in check after this move
+                const stillInCheck = isKingInCheck(currentTurn);
+
+                // Undo the move
+                initialBoard[row][col] = piece;
+                initialBoard[targetRow][targetCol] = originalPiece;
+
+                // If king is still in check, this is not a valid move
+                if (stillInCheck) {
+                    console.log('Move rejected - king would still be in check');
+                    return false;
+                }
+            }
+
             const deltaRow = targetRow - row;
             const deltaCol = targetCol - col;
 
