@@ -54,11 +54,18 @@
             pointer-events: none;
             font-family: monospace;
         }
+        #undo-button {
+            margin-top: 20px;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
     <div id="status">Turn: White | Move Count: 0</div>
     <div id="chessboard"></div>
+    <button id="undo-button">Undo Last Move</button>
     <script>
         const boardElement = document.getElementById('chessboard');
         const statusElement = document.getElementById('status');
@@ -83,6 +90,7 @@
         let blackKingMoved = false;
         let whiteRookMoved = { left: false, right: false };
         let blackRookMoved = { left: false, right: false };
+        let moveHistory = [];
 
         function createChessboard() {
             console.log('Function called: createChessboard');
@@ -303,6 +311,12 @@
 
         function movePiece(selectedPiece, targetRow, targetCol) {
             const { piece, row, col } = selectedPiece;
+            moveHistory.push({
+                piece,
+                from: { row, col },
+                to: { row: targetRow, col: targetCol },
+                captured: initialBoard[targetRow][targetCol]
+            });
             initialBoard[targetRow][targetCol] = piece;
             initialBoard[row][col] = "";
 
@@ -325,6 +339,21 @@
                 }
             }
         }
+
+        document.getElementById('undo-button').addEventListener('click', () => {
+            if (moveHistory.length === 0) return;
+
+            const lastMove = moveHistory.pop();
+            initialBoard[lastMove.from.row][lastMove.from.col] = lastMove.piece;
+            initialBoard[lastMove.to.row][lastMove.to.col] = lastMove.captured;
+
+            // Switch turn back
+            currentTurn = currentTurn === "white" ? "black" : "white";
+            moveCount--;
+            updateStatus();
+            createChessboard();
+            clearHighlights();
+        });
 
         function isPathClear(startRow, startCol, endRow, endCol) {
             console.log(`Function called: isPathClear - From (${startRow},${startCol}) to (${endRow},${endCol})`);
