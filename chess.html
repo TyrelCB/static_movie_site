@@ -182,9 +182,8 @@
                     clearHighlights();
                     // Switch turn
                     currentTurn = "black";
-                    moveCount++;
-                    updateStatus();
-                    console.log(`Turn changed to ${currentTurn}, move count: ${moveCount}`);
+                    updateStatus(); // Remove moveCount++ from here
+                    console.log(`Turn changed to ${currentTurn}`);
 
                     // Check for check
                     if (isKingInCheck(currentTurn)) {
@@ -449,7 +448,9 @@
 
             // Switch turn back
             currentTurn = currentTurn === "white" ? "black" : "white";
-            moveCount--;
+            if (currentTurn === "white") { // Decrement move count only when undoing to white's turn
+                moveCount--;
+            }
             updateStatus();
             createChessboard();
             clearHighlights();
@@ -685,7 +686,7 @@
                 createChessboard();
                 clearHighlights();
                 currentTurn = "white";
-                moveCount++;
+                moveCount++; // Increment move count after black's move completes
                 updateStatus();
                 console.log(`Computer moved ${move.piece} from (${move.from.row},${move.from.col}) to (${move.to.row},${move.to.col})`);
 
@@ -719,17 +720,50 @@
             const promotionMenu = document.getElementById('promotion-menu');
             promotionMenu.innerHTML = '';
             const pieces = currentTurn === "white" ? ["♕", "♖", "♗", "♘"] : ["♛", "♜", "♝", "♞"];
+            const originalPiece = initialBoard[row][col];
             
             pieces.forEach(piece => {
                 const pieceDiv = document.createElement('div');
                 pieceDiv.classList.add('promotion-piece');
                 pieceDiv.textContent = piece;
                 pieceDiv.addEventListener('click', () => {
+                    // Temporarily make the promotion
                     initialBoard[row][col] = piece;
+                    
+                    // Check if this promotion would put/leave the king in check
+                    const kingInCheck = isKingInCheck(currentTurn);
+                    
+                    if (kingInCheck) {
+                        // Undo the promotion if it puts/leaves king in check
+                        initialBoard[row][col] = originalPiece;
+                        statusElement.textContent = "Invalid promotion - would leave king in check!";
+                        return;
+                    }
+                    
+                    // Proceed with the promotion if it's safe
                     promotionMenu.style.display = 'none';
                     createChessboard();
                     currentTurn = currentTurn === "white" ? "black" : "white";
-                    moveCount++;
+                    if (currentTurn === "black") {
+                        moveCount++;
+                    }
+
+                    // Check if opponent's king is in check or checkmate
+                    if (isKingInCheck(currentTurn)) {
+                        console.log(`${currentTurn} king is in check!`);
+                        statusElement.textContent = `${currentTurn.charAt(0).toUpperCase() + currentTurn.slice(1)} is in check!`;
+                        kingInCheck = true;
+
+                        if (isCheckmate(currentTurn)) {
+                            console.log(`${currentTurn} king is in checkmate! Game Over! Move count: ${moveCount}`);
+                            statusElement.textContent = `${currentTurn.charAt(0).toUpperCase() + currentTurn.slice(1)} is in checkmate. Game over! Move count: ${moveCount}`;
+                            checkMate = true;
+                            return;
+                        }
+                    } else {
+                        kingInCheck = false;
+                    }
+
                     updateStatus();
                     if (currentTurn === "black") {
                         setTimeout(makeRandomMove, 500);
