@@ -274,31 +274,55 @@
                     return (deltaRow === 0 || deltaCol === 0 || Math.abs(deltaRow) === Math.abs(deltaCol)) && isPathClear(row, col, targetRow, targetCol);
                 case "♔": // White King
                     if (Math.abs(deltaRow) <= 1 && Math.abs(deltaCol) <= 1) {
-                        whiteKingMoved = true;
                         return true;
                     }
                     // Castling
-                    if (!whiteKingMoved && deltaRow === 0 && Math.abs(deltaCol) === 2) {
-                        if (deltaCol === 2 && !whiteRookMoved.right && isPathClear(row, col, row, col + 3) && !isKingInCheck(currentTurn) && !isKingInCheckAfterMove(row, col + 1) && !isKingInCheckAfterMove(row, col + 2)) {
-                            return true;
+                    if (!whiteKingMoved && row === 7 && col === 4) {
+                        // King-side castling
+                        if (deltaRow === 0 && deltaCol === 2 && !whiteRookMoved.right) {
+                            return initialBoard[7][5] === "" && 
+                                   initialBoard[7][6] === "" && 
+                                   initialBoard[7][7] === "♖" &&
+                                   !isKingInCheck("white") &&
+                                   !isKingInCheckAfterMove(7, 5) &&
+                                   !isKingInCheckAfterMove(7, 6);
                         }
-                        if (deltaCol === -2 && !whiteRookMoved.left && isPathClear(row, col, row, col - 4) && !isKingInCheck(currentTurn) && !isKingInCheckAfterMove(row, col - 1) && !isKingInCheckAfterMove(row, col - 2)) {
-                            return true;
+                        // Queen-side castling
+                        if (deltaRow === 0 && deltaCol === -2 && !whiteRookMoved.left) {
+                            return initialBoard[7][3] === "" &&
+                                   initialBoard[7][2] === "" &&
+                                   initialBoard[7][1] === "" &&
+                                   initialBoard[7][0] === "♖" &&
+                                   !isKingInCheck("white") &&
+                                   !isKingInCheckAfterMove(7, 3) &&
+                                   !isKingInCheckAfterMove(7, 2);
                         }
                     }
                     return false;
                 case "♚": // Black King
                     if (Math.abs(deltaRow) <= 1 && Math.abs(deltaCol) <= 1) {
-                        blackKingMoved = true;
                         return true;
                     }
                     // Castling
-                    if (!blackKingMoved && deltaRow === 0 && Math.abs(deltaCol) === 2) {
-                        if (deltaCol === 2 && !blackRookMoved.right && isPathClear(row, col, row, col + 3) && !isKingInCheck(currentTurn) && !isKingInCheckAfterMove(row, col + 1) && !isKingInCheckAfterMove(row, col + 2)) {
-                            return true;
+                    if (!blackKingMoved && row === 0 && col === 4) {
+                        // King-side castling
+                        if (deltaRow === 0 && deltaCol === 2 && !blackRookMoved.right) {
+                            return initialBoard[0][5] === "" &&
+                                   initialBoard[0][6] === "" &&
+                                   initialBoard[0][7] === "♜" &&
+                                   !isKingInCheck("black") &&
+                                   !isKingInCheckAfterMove(0, 5) &&
+                                   !isKingInCheckAfterMove(0, 6);
                         }
-                        if (deltaCol === -2 && !blackRookMoved.left && isPathClear(row, col, row, col - 4) && !isKingInCheck(currentTurn) && !isKingInCheckAfterMove(row, col - 1) && !isKingInCheckAfterMove(row, col - 2)) {
-                            return true;
+                        // Queen-side castling
+                        if (deltaRow === 0 && deltaCol === -2 && !blackRookMoved.left) {
+                            return initialBoard[0][3] === "" &&
+                                   initialBoard[0][2] === "" &&
+                                   initialBoard[0][1] === "" &&
+                                   initialBoard[0][0] === "♜" &&
+                                   !isKingInCheck("black") &&
+                                   !isKingInCheckAfterMove(0, 3) &&
+                                   !isKingInCheckAfterMove(0, 2);
                         }
                     }
                     return false;
@@ -310,37 +334,50 @@
 
         function movePiece(selectedPiece, targetRow, targetCol) {
             const { piece, row, col } = selectedPiece;
+            
+            // Track the move
             moveHistory.push({
                 piece,
                 from: { row, col },
                 to: { row: targetRow, col: targetCol },
-                captured: initialBoard[targetRow][targetCol]
+                captured: initialBoard[targetRow][targetCol],
+                isCastling: false
             });
-            initialBoard[targetRow][targetCol] = piece;
-            initialBoard[row][col] = "";
 
-            // Handle castling
-            if (piece === "♔" && Math.abs(targetCol - col) === 2) {
+            // Handle castling moves
+            if (piece === "♔" && row === 7 && col === 4) {
                 if (targetCol === 6) { // King-side castling
-                    initialBoard[row][5] = "♖";
-                    initialBoard[row][7] = "";
+                    initialBoard[7][7] = ""; // Remove rook from original position
+                    initialBoard[7][5] = "♖"; // Place rook in new position
+                    moveHistory[moveHistory.length - 1].isCastling = true;
+                    whiteRookMoved.right = true;
                 } else if (targetCol === 2) { // Queen-side castling
-                    initialBoard[row][3] = "♖";
-                    initialBoard[row][0] = "";
+                    initialBoard[7][0] = ""; // Remove rook from original position
+                    initialBoard[7][3] = "♖"; // Place rook in new position
+                    moveHistory[moveHistory.length - 1].isCastling = true;
+                    whiteRookMoved.left = true;
                 }
                 whiteKingMoved = true;
-            } else if (piece === "♚" && Math.abs(targetCol - col) === 2) {
+            } else if (piece === "♚" && row === 0 && col === 4) {
                 if (targetCol === 6) { // King-side castling
-                    initialBoard[row][5] = "♜";
-                    initialBoard[row][7] = "";
+                    initialBoard[0][7] = ""; // Remove rook from original position
+                    initialBoard[0][5] = "♜"; // Place rook in new position
+                    moveHistory[moveHistory.length - 1].isCastling = true;
+                    blackRookMoved.right = true;
                 } else if (targetCol === 2) { // Queen-side castling
-                    initialBoard[row][3] = "♜";
-                    initialBoard[row][0] = "";
+                    initialBoard[0][0] = ""; // Remove rook from original position
+                    initialBoard[0][3] = "♜"; // Place rook in new position
+                    moveHistory[moveHistory.length - 1].isCastling = true;
+                    blackRookMoved.left = true;
                 }
                 blackKingMoved = true;
             }
 
-            // Update rook movement flags
+            // Make the move
+            initialBoard[targetRow][targetCol] = piece;
+            initialBoard[row][col] = "";
+
+            // Update rook movement flags if rooks move
             if (piece === "♖") {
                 if (row === 7 && col === 0) whiteRookMoved.left = true;
                 if (row === 7 && col === 7) whiteRookMoved.right = true;
@@ -416,19 +453,49 @@
         }
 
         // Highlight castling moves
-        if (selectedPiece.piece === "♔" && !whiteKingMoved) {
-            if (!whiteRookMoved.right && isPathClear(selectedPiece.row, selectedPiece.col, selectedPiece.row, selectedPiece.col + 3) && !isKingInCheck(currentTurn) && !isKingInCheckAfterMove(selectedPiece.row, selectedPiece.col + 1) && !isKingInCheckAfterMove(selectedPiece.row, selectedPiece.col + 2)) {
-                document.querySelector(`[data-row='${selectedPiece.row}'][data-col='${selectedPiece.col + 2}']`).classList.add('castle-move');
+        if (selectedPiece.piece === "♔" && !whiteKingMoved && selectedPiece.row === 7 && selectedPiece.col === 4) {
+            // King-side castling
+            if (!whiteRookMoved.right && 
+                initialBoard[7][5] === "" && 
+                initialBoard[7][6] === "" && 
+                initialBoard[7][7] === "♖" &&
+                !isKingInCheck("white") &&
+                !isKingInCheckAfterMove(7, 5) &&
+                !isKingInCheckAfterMove(7, 6)) {
+                document.querySelector(`[data-row='7'][data-col='6']`).classList.add('castle-move');
             }
-            if (!whiteRookMoved.left && isPathClear(selectedPiece.row, selectedPiece.col, selectedPiece.row, selectedPiece.col - 4) && !isKingInCheck(currentTurn) && !isKingInCheckAfterMove(selectedPiece.row, selectedPiece.col - 1) && !isKingInCheckAfterMove(selectedPiece.row, selectedPiece.col - 2)) {
-                document.querySelector(`[data-row='${selectedPiece.row}'][data-col='${selectedPiece.col - 2}']`).classList.add('castle-move');
+            // Queen-side castling
+            if (!whiteRookMoved.left && 
+                initialBoard[7][3] === "" && 
+                initialBoard[7][2] === "" && 
+                initialBoard[7][1] === "" && 
+                initialBoard[7][0] === "♖" &&
+                !isKingInCheck("white") &&
+                !isKingInCheckAfterMove(7, 3) &&
+                !isKingInCheckAfterMove(7, 2)) {
+                document.querySelector(`[data-row='7'][data-col='2']`).classList.add('castle-move');
             }
-        } else if (selectedPiece.piece === "♚" && !blackKingMoved) {
-            if (!blackRookMoved.right && isPathClear(selectedPiece.row, selectedPiece.col, selectedPiece.row, selectedPiece.col + 3) && !isKingInCheck(currentTurn) && !isKingInCheckAfterMove(selectedPiece.row, selectedPiece.col + 1) && !isKingInCheckAfterMove(selectedPiece.row, selectedPiece.col + 2)) {
-                document.querySelector(`[data-row='${selectedPiece.row}'][data-col='${selectedPiece.col + 2}']`).classList.add('castle-move');
+        } else if (selectedPiece.piece === "♚" && !blackKingMoved && selectedPiece.row === 0 && selectedPiece.col === 4) {
+            // King-side castling
+            if (!blackRookMoved.right && 
+                initialBoard[0][5] === "" && 
+                initialBoard[0][6] === "" && 
+                initialBoard[0][7] === "♜" &&
+                !isKingInCheck("black") &&
+                !isKingInCheckAfterMove(0, 5) &&
+                !isKingInCheckAfterMove(0, 6)) {
+                document.querySelector(`[data-row='0'][data-col='6']`).classList.add('castle-move');
             }
-            if (!blackRookMoved.left && isPathClear(selectedPiece.row, selectedPiece.col, selectedPiece.row, selectedPiece.col - 4) && !isKingInCheck(currentTurn) && !isKingInCheckAfterMove(selectedPiece.row, selectedPiece.col - 1) && !isKingInCheckAfterMove(selectedPiece.row, selectedPiece.col - 2)) {
-                document.querySelector(`[data-row='${selectedPiece.row}'][data-col='${selectedPiece.col - 2}']`).classList.add('castle-move');
+            // Queen-side castling
+            if (!blackRookMoved.left && 
+                initialBoard[0][3] === "" && 
+                initialBoard[0][2] === "" && 
+                initialBoard[0][1] === "" && 
+                initialBoard[0][0] === "♜" &&
+                !isKingInCheck("black") &&
+                !isKingInCheckAfterMove(0, 3) &&
+                !isKingInCheckAfterMove(0, 2)) {
+                document.querySelector(`[data-row='0'][data-col='2']`).classList.add('castle-move');
             }
         }
     }
