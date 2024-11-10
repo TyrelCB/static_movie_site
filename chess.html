@@ -60,12 +60,39 @@
             font-size: 16px;
             cursor: pointer;
         }
+        #promotion-menu {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: white;
+            padding: 20px;
+            border: 2px solid #333;
+            border-radius: 5px;
+            display: none;
+            flex-direction: row;
+            gap: 10px;
+        }
+        .promotion-piece {
+            font-size: 36px;
+            width: 60px;
+            height: 60px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            border: 1px solid #ccc;
+        }
+        .promotion-piece:hover {
+            background-color: #eee;
+        }
     </style>
 </head>
 <body>
     <div id="status">Turn: White | Move Count: 0</div>
     <div id="chessboard"></div>
     <button id="undo-button">Undo Last Move</button>
+    <div id="promotion-menu"></div>
     <script>
         const boardElement = document.getElementById('chessboard');
         const statusElement = document.getElementById('status');
@@ -211,6 +238,34 @@
             console.log(`Function called: isValidMove - Piece: ${selectedPiece.piece} from (${selectedPiece.row},${selectedPiece.col}) to (${targetRow},${targetCol})`);
             const { piece, row, col } = selectedPiece;
 
+            // Prevent moving to a square occupied by a piece of the same color
+            if (isSameColor(piece, initialBoard[targetRow][targetCol])) {
+                return false;
+            }
+
+            // If it's a king, check if the move would put it in check
+            if (piece === "♔" || piece === "♚") {
+                // Temporarily make the move
+                const originalPiece = initialBoard[targetRow][targetCol];
+                initialBoard[targetRow][targetCol] = piece;
+                initialBoard[row][col] = "";
+                
+                // Check if this position would be in check
+                const wouldBeInCheck = isKingInCheck(currentTurn);
+                
+                // Undo the move
+                initialBoard[row][col] = piece;
+                initialBoard[targetRow][targetCol] = originalPiece;
+                
+                if (wouldBeInCheck) {
+                    console.log('Move rejected - king would be in check');
+                    return false;
+                }
+            }
+
+            const deltaRow = targetRow - row;
+            const deltaCol = targetCol - col;
+
             // If king is in check, verify if this move will get king out of check
             if (kingInCheck) {
                 // Temporarily make the move
@@ -227,14 +282,6 @@
                     console.log('Move rejected - king would still be in check');
                     return false;
                 }
-            }
-
-            const deltaRow = targetRow - row;
-            const deltaCol = targetCol - col;
-
-            // Prevent moving to a square occupied by a piece of the same color
-            if (isSameColor(piece, initialBoard[targetRow][targetCol])) {
-                return false;
             }
 
             switch (piece) {
@@ -376,6 +423,12 @@
             // Make the move
             initialBoard[targetRow][targetCol] = piece;
             initialBoard[row][col] = "";
+
+            // Check for pawn promotion
+            if (handlePawnPromotion(targetRow, targetCol)) {
+                showPromotionMenu(targetRow, targetCol);
+                return;
+            }
 
             // Update rook movement flags if rooks move
             if (piece === "♖") {
@@ -652,6 +705,40 @@
                     checkMate = true;
                 }
             }
+        }
+
+        function handlePawnPromotion(row, col) {
+            const piece = initialBoard[row][col];
+            if ((piece === "♙" && row === 0) || (piece === "♟" && row === 7)) {
+                return true;
+            }
+            return false;
+        }
+
+        function showPromotionMenu(row, col) {
+            const promotionMenu = document.getElementById('promotion-menu');
+            promotionMenu.innerHTML = '';
+            const pieces = currentTurn === "white" ? ["♕", "♖", "♗", "♘"] : ["♛", "♜", "♝", "♞"];
+            
+            pieces.forEach(piece => {
+                const pieceDiv = document.createElement('div');
+                pieceDiv.classList.add('promotion-piece');
+                pieceDiv.textContent = piece;
+                pieceDiv.addEventListener('click', () => {
+                    initialBoard[row][col] = piece;
+                    promotionMenu.style.display = 'none';
+                    createChessboard();
+                    currentTurn = currentTurn === "white" ? "black" : "white";
+                    moveCount++;
+                    updateStatus();
+                    if (currentTurn === "black") {
+                        setTimeout(makeRandomMove, 500);
+                    }
+                });
+                promotionMenu.appendChild(pieceDiv);
+            });
+
+            promotionMenu.style.display = 'flex';
         }
     </script>
 </body>
