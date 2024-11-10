@@ -154,7 +154,7 @@
                     createChessboard();
                     clearHighlights();
                     // Switch turn
-                    currentTurn = currentTurn === "white" ? "black" : "white";
+                    currentTurn = "black";
                     moveCount++;
                     updateStatus();
                     console.log(`Turn changed to ${currentTurn}, move count: ${moveCount}`);
@@ -173,6 +173,8 @@
                         console.log(`${currentTurn} king is in checkmate! Game Over! Move count: ${moveCount}`);
                         statusElement.textContent = `${currentTurn.charAt(0).toUpperCase() + currentTurn.slice(1)} is in checkmate. Game over! Move count: ${moveCount}`;
                         checkMate = true;
+                    } else {
+                        setTimeout(makeRandomMove, 500); // Delay to simulate thinking time
                     }
                 } else {
                     console.log(`Invalid move attempted from (${selectedPiece.row},${selectedPiece.col}) to (${row},${col})`);
@@ -521,6 +523,51 @@
             }
 
             return false;
+        }
+
+        function makeRandomMove() {
+            const validMoves = [];
+            for (let row = 0; row < 8; row++) {
+                for (let col = 0; col < 8; col++) {
+                    const piece = initialBoard[row][col];
+                    if (piece !== "" && isCorrectTurn(piece)) {
+                        for (let targetRow = 0; targetRow < 8; targetRow++) {
+                            for (let targetCol = 0; targetCol < 8; targetCol++) {
+                                if (isValidMove({ piece, row, col }, targetRow, targetCol)) {
+                                    validMoves.push({ piece, from: { row, col }, to: { row: targetRow, col: targetCol } });
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (validMoves.length > 0) {
+                const move = validMoves[Math.floor(Math.random() * validMoves.length)];
+                movePiece({ piece: move.piece, row: move.from.row, col: move.from.col }, move.to.row, move.to.col);
+                createChessboard();
+                clearHighlights();
+                currentTurn = "white";
+                moveCount++;
+                updateStatus();
+                console.log(`Computer moved ${move.piece} from (${move.from.row},${move.from.col}) to (${move.to.row},${move.to.col})`);
+
+                // Check for check
+                if (isKingInCheck(currentTurn)) {
+                    console.log(`${currentTurn} king is in check!`);
+                    statusElement.textContent = `${currentTurn.charAt(0).toUpperCase() + currentTurn.slice(1)} is in check!`;
+                    kingInCheck = true;
+                } else {
+                    kingInCheck = false;
+                }
+
+                // Check for checkmate
+                if (isCheckmate(currentTurn)) {
+                    console.log(`${currentTurn} king is in checkmate! Game Over! Move count: ${moveCount}`);
+                    statusElement.textContent = `${currentTurn.charAt(0).toUpperCase() + currentTurn.slice(1)} is in checkmate. Game over! Move count: ${moveCount}`;
+                    checkMate = true;
+                }
+            }
         }
     </script>
 </body>
