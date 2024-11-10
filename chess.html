@@ -40,6 +40,9 @@
         .valid-move {
             background-color: lightgreen !important;
         }
+        .castle-move {
+            background-color: lightblue !important;
+        }
         #status {
             margin-bottom: 20px;
             font-size: 24px;
@@ -76,6 +79,10 @@
         let moveCount = 0;
         let enPassantTarget = null;
         let kingInCheck = false;
+        let whiteKingMoved = false;
+        let blackKingMoved = false;
+        let whiteRookMoved = { left: false, right: false };
+        let blackRookMoved = { left: false, right: false };
 
         function createChessboard() {
             console.log('Function called: createChessboard');
@@ -118,6 +125,7 @@
                 // Validate the move based on the piece type
                 if (isValidMove(selectedPiece, row, col)) {
                     console.log(`Moving ${selectedPiece.piece} from (${selectedPiece.row},${selectedPiece.col}) to (${row},${col})`);
+                    movePiece(selectedPiece, row, col);
                     
                     // Handle en passant capture
                     if (enPassantTarget && row === enPassantTarget.row && col === enPassantTarget.col) {
@@ -154,8 +162,8 @@
 
                     // Check for checkmate
                     if (isCheckmate(currentTurn)) {
-                        console.log(`${currentTurn} king is in checkmate! Game Over!`);
-                        statusElement.textContent = `${currentTurn.charAt(0).toUpperCase() + currentTurn.slice(1)} is in checkmate. Game over!`;
+                        console.log(`${currentTurn} king is in checkmate! Game Over! Move count: ${moveCount}`);
+                        statusElement.textContent = `${currentTurn.charAt(0).toUpperCase() + currentTurn.slice(1)} is in checkmate. Game over! Move count: ${moveCount}`;
                         checkMate = true;
                     }
                 } else {
@@ -259,10 +267,62 @@
                 case "♛": // Black Queen
                     return (deltaRow === 0 || deltaCol === 0 || Math.abs(deltaRow) === Math.abs(deltaCol)) && isPathClear(row, col, targetRow, targetCol);
                 case "♔": // White King
+                    if (Math.abs(deltaRow) <= 1 && Math.abs(deltaCol) <= 1) {
+                        whiteKingMoved = true;
+                        return true;
+                    }
+                    // Castling
+                    if (!whiteKingMoved && deltaRow === 0 && Math.abs(deltaCol) === 2) {
+                        if (deltaCol === 2 && !whiteRookMoved.right && isPathClear(row, col, row, col + 3)) {
+                            return true;
+                        }
+                        if (deltaCol === -2 && !whiteRookMoved.left && isPathClear(row, col, row, col - 4)) {
+                            return true;
+                        }
+                    }
+                    return false;
                 case "♚": // Black King
-                    return Math.abs(deltaRow) <= 1 && Math.abs(deltaCol) <= 1;
+                    if (Math.abs(deltaRow) <= 1 && Math.abs(deltaCol) <= 1) {
+                        blackKingMoved = true;
+                        return true;
+                    }
+                    // Castling
+                    if (!blackKingMoved && deltaRow === 0 && Math.abs(deltaCol) === 2) {
+                        if (deltaCol === 2 && !blackRookMoved.right && isPathClear(row, col, row, col + 3)) {
+                            return true;
+                        }
+                        if (deltaCol === -2 && !blackRookMoved.left && isPathClear(row, col, row, col - 4)) {
+                            return true;
+                        }
+                    }
+                    return false;
                 default:
                     return false;
+            }
+        }
+
+        function movePiece(selectedPiece, targetRow, targetCol) {
+            const { piece, row, col } = selectedPiece;
+            initialBoard[targetRow][targetCol] = piece;
+            initialBoard[row][col] = "";
+
+            // Handle castling
+            if (piece === "♔" && Math.abs(targetCol - col) === 2) {
+                if (targetCol === 6) { // King-side castling
+                    initialBoard[row][5] = "♖";
+                    initialBoard[row][7] = "";
+                } else if (targetCol === 2) { // Queen-side castling
+                    initialBoard[row][3] = "♖";
+                    initialBoard[row][0] = "";
+                }
+            } else if (piece === "♚" && Math.abs(targetCol - col) === 2) {
+                if (targetCol === 6) { // King-side castling
+                    initialBoard[row][5] = "♜";
+                    initialBoard[row][7] = "";
+                } else if (targetCol === 2) { // Queen-side castling
+                    initialBoard[row][3] = "♜";
+                    initialBoard[row][0] = "";
+                }
             }
         }
 
@@ -315,12 +375,29 @@
                     }
                 }
             }
+
+            // Highlight castling moves
+            if (selectedPiece.piece === "♔" && !whiteKingMoved) {
+                if (!whiteRookMoved.right && isPathClear(selectedPiece.row, selectedPiece.col, selectedPiece.row, selectedPiece.col + 3)) {
+                    document.querySelector(`[data-row='${selectedPiece.row}'][data-col='${selectedPiece.col + 2}']`).classList.add('castle-move');
+                }
+                if (!whiteRookMoved.left && isPathClear(selectedPiece.row, selectedPiece.col, selectedPiece.row, selectedPiece.col - 4)) {
+                    document.querySelector(`[data-row='${selectedPiece.row}'][data-col='${selectedPiece.col - 2}']`).classList.add('castle-move');
+                }
+            } else if (selectedPiece.piece === "♚" && !blackKingMoved) {
+                if (!blackRookMoved.right && isPathClear(selectedPiece.row, selectedPiece.col, selectedPiece.row, selectedPiece.col + 3)) {
+                    document.querySelector(`[data-row='${selectedPiece.row}'][data-col='${selectedPiece.col + 2}']`).classList.add('castle-move');
+                }
+                if (!blackRookMoved.left && isPathClear(selectedPiece.row, selectedPiece.col, selectedPiece.row, selectedPiece.col - 4)) {
+                    document.querySelector(`[data-row='${selectedPiece.row}'][data-col='${selectedPiece.col - 2}']`).classList.add('castle-move');
+                }
+            }
         }
 
         function clearHighlights() {
             console.log('Function called: clearHighlights');
-            document.querySelectorAll('.valid-move').forEach(tile => {
-                tile.classList.remove('valid-move');
+            document.querySelectorAll('.valid-move, .castle-move').forEach(tile => {
+                tile.classList.remove('valid-move', 'castle-move');
             });
         }
 
