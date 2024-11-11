@@ -139,7 +139,7 @@
         }
 
         .spinner {
-            display: none;
+            display: none;  /* Changed from display: inline-block */
             width: 20px;
             height: 20px;
             border: 3px solid #f3f3f3;
@@ -147,7 +147,6 @@
             border-radius: 50%;
             margin-left: 10px;
             animation: spin 1s linear infinite;
-            display: inline-block;
             vertical-align: middle;
         }
 
@@ -169,7 +168,7 @@
         </div>
         <div class="game-right">
             <div class="game-info">
-                <div id="turn">White's turn<div id="ai-spinner" class="spinner"></div></div>
+                <div id="turn">White's turn</div>
                 <div id="status"></div>
             </div>
             <div class="game-log" id="game-log"></div>
@@ -432,6 +431,10 @@
                 const piece = this.board[startRow][startCol];
                 if (!piece || piece.color !== color) return false;
 
+                // Prevent capturing kings during evaluation
+                const targetPiece = this.board[endRow][endCol];
+                if (targetPiece && targetPiece.type === 'KING') return false;
+
                 // Try the move
                 const savedTarget = this.board[endRow][endCol];
                 const savedLastPawnMove = this.lastPawnDoubleMove;
@@ -576,10 +579,12 @@
                     status.textContent = '';
                 }
 
-                document.getElementById('turn').innerHTML = 
-                    `${this.currentPlayer}'s turn<div id="ai-spinner" class="spinner"></div>`;
+                // Update turn display while keeping spinner hidden by default
+                const turnElement = document.getElementById('turn');
+                turnElement.innerHTML = `${this.currentPlayer}'s turn<div id="ai-spinner" class="spinner"></div>`;
+                // Hide spinner immediately after creating it
+                document.getElementById('ai-spinner').style.display = 'none';
                 
-                // Add this at the end
                 if (this.currentPlayer === 'BLACK' && !this.gameOver) {
                     this.makeAIMove();
                 }
@@ -757,6 +762,11 @@
             }
 
             minimax(depth, alpha, beta, maximizingPlayer) {
+                // Check if kings exist before evaluation
+                if (!this.findKing('WHITE') || !this.findKing('BLACK')) {
+                    return maximizingPlayer ? -Infinity : Infinity;
+                }
+
                 if (depth === 0) {
                     return this.evaluatePosition('BLACK');
                 }
@@ -831,8 +841,14 @@
             findBestMove() {
                 let bestScore = -Infinity;
                 let bestMove = null;
-                const depth = 1; // Increase for stronger play, decrease for faster moves
+                const depth = 1;
                 
+                // Verify kings before starting search
+                if (!this.findKing('WHITE') || !this.findKing('BLACK')) {
+                    console.error('Kings missing before search');
+                    return null;
+                }
+
                 for (let startRow = 0; startRow < 8; startRow++) {
                     for (let startCol = 0; startCol < 8; startCol++) {    // Fix: add < 8
                         const piece = this.board[startRow][startCol];
@@ -857,6 +873,7 @@
                                     if (score > bestScore) {
                                         bestScore = score;
                                         bestMove = { startRow, startCol, endRow, endCol };
+                                        console.log('New best move:', bestMove, 'Score:', bestScore);
                                     }
                                 }
                             }
