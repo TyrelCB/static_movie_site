@@ -159,11 +159,39 @@
             display: flex;
             align-items: center;
         }
+
+        .difficulty-control {
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .difficulty-slider {
+            width: 100%;
+            margin: 10px 0;
+        }
+
+        .difficulty-label {
+            font-size: 1.1em;
+            color: #343a40;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
     </style>
 </head>
 <body>
     <div class="game-container">
         <div class="game-left">
+            <div class="difficulty-control">
+                <div class="difficulty-label">
+                    <span>AI Difficulty:</span>
+                    <span id="depth-value">3</span>
+                </div>
+                <input type="range" min="1" max="5" value="3" class="difficulty-slider" id="depth-slider">
+            </div>
             <div class="board" id="board"></div>
         </div>
         <div class="game-right">
@@ -202,6 +230,8 @@
                 this.validMovesCache = new Map(); // Add cache for valid moves
                 this.computeAllValidMoves(); // Initial computation
                 this.isAIEnabled = true; // Add this line
+                this.searchDepth = 3; // Add default search depth
+                this.initializeControls(); // Add this line
             }
 
             initializeLogging() {
@@ -585,6 +615,9 @@
                 // Hide spinner immediately after creating it
                 document.getElementById('ai-spinner').style.display = 'none';
                 
+                // Render immediately after white's move
+                this.renderBoard();
+                
                 if (this.currentPlayer === 'BLACK' && !this.gameOver) {
                     this.makeAIMove();
                 }
@@ -819,7 +852,7 @@
             findBestMove() {
                 let bestScore = -Infinity;
                 let bestMove = null;
-                const depth = 4; // Increased depth
+                const depth = this.searchDepth; // Use configurable depth
                 
                 const savedPlayer = this.currentPlayer;
                 this.currentPlayer = 'BLACK';
@@ -864,19 +897,24 @@
                 const spinner = document.getElementById('ai-spinner');
                 spinner.style.display = 'inline-block';
                 
-                // Use requestAnimationFrame to ensure spinner starts
-                requestAnimationFrame(() => {
+                // Use setTimeout to ensure board renders before heavy calculation
+                setTimeout(() => {
                     const move = this.findBestMove();
                     if (move) {
-                        setTimeout(() => {
-                            this.movePiece(move.startRow, move.startCol, move.endRow, move.endCol);
-                            this.renderBoard();
-                            // Hide spinner
-                            spinner.style.display = 'none';
-                        }, 500);
-                    } else {
-                        spinner.style.display = 'none';
+                        this.movePiece(move.startRow, move.startCol, move.endRow, move.endCol);
+                        this.renderBoard();
                     }
+                    spinner.style.display = 'none';
+                }, 50); // Small delay to allow board to render
+            }
+
+            initializeControls() {
+                const slider = document.getElementById('depth-slider');
+                const depthValue = document.getElementById('depth-value');
+                
+                slider.addEventListener('input', (e) => {
+                    this.searchDepth = parseInt(e.target.value);
+                    depthValue.textContent = this.searchDepth;
                 });
             }
 
