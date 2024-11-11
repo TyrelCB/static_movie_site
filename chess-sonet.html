@@ -21,7 +21,26 @@
         .white { background: #fff; }
         .black { background: #999; }
         .selected { background: #7fff7f; }
-        .valid-move { background: #7f7fff; }
+        .valid-move { 
+            position: relative;
+            background: inherit;
+        }
+        .valid-move::after {
+            content: '';
+            position: absolute;
+            width: 30%;
+            height: 30%;
+            background: #ffeb3b;
+            border-radius: 50%;
+            opacity: 0.7;
+        }
+        .valid-capture::after {
+            width: 100%;
+            height: 100%;
+            border: 4px solid #ffeb3b;
+            background: none;
+            box-sizing: border-box;
+        }
         .game-info {
             margin: 20px;
             font-family: Arial, sans-serif;
@@ -73,6 +92,8 @@
                 this.gameOver = false; // Add this line
                 this.moveHistory = [];
                 this.initializeLogging();
+                this.validMovesCache = new Map(); // Add cache for valid moves
+                this.computeAllValidMoves(); // Initial computation
             }
 
             initializeLogging() {
@@ -195,17 +216,36 @@
                 const direction = endCol > startCol ? 1 : -1;
                 const rookCol = direction === 1 ? 7 : 0;
                 const rook = this.board[startRow][rookCol];
+                const kingColor = this.board[startRow][startCol].color;
+                const oppositeColor = kingColor === 'WHITE' ? 'BLACK' : 'WHITE';
 
-                // Check if rook exists and hasn't moved
-                if (!rook || rook.type !== 'ROOK' || rook.hasMoved) {
+                // Cannot castle while in check
+                if (this.isInCheck(kingColor)) {
+                    console.log('Cannot castle while in check');
                     return false;
                 }
 
-                // Check if path is clear between king and rook
-                const start = direction === 1 ? startCol + 1 : rookCol + 1;
-                const end = direction === 1 ? rookCol : startCol;
-                for (let col = start; col < end; col++) {
-                    if (this.board[startRow][col] !== null) {
+                // Check if rook exists and hasn't moved
+                if (!rook || rook.type !== 'ROOK' || rook.hasMoved) {
+                    console.log('Invalid rook state for castling');
+                    return false;
+                }
+
+                // Check if path is clear and king doesn't pass through attacked squares
+                const pathStart = startCol;
+                const pathEnd = direction === 1 ? startCol + 2 : startCol - 2;
+                const step = direction;
+
+                // Check each square in the king's path
+                for (let col = pathStart; direction === 1 ? col <= pathEnd : col >= pathEnd; col += step) {
+                    // Skip checking occupancy of starting square
+                    if (col !== startCol && this.board[startRow][col] !== null) {
+                        console.log('Path is blocked for castling');
+                        return false;
+                    }
+                    // Check if square is under attack (including starting and ending squares)
+                    if (this.isSquareUnderAttack(startRow, col, oppositeColor)) {
+                        console.log(`Square ${startRow},${col} is under attack`);
                         return false;
                     }
                 }
@@ -229,15 +269,27 @@
             }
 
             findKing(color) {
+                let kingFound = false;
+                let kingPosition = null;
+                
                 for (let row = 0; row < 8; row++) {
                     for (let col = 0; col < 8; col++) {
                         const piece = this.board[row][col];
                         if (piece && piece.type === 'KING' && piece.color === color) {
-                            return { row, col };
+                            if (kingFound) {
+                                console.error('Multiple kings found for', color);
+                            }
+                            kingFound = true;
+                            kingPosition = { row, col };
                         }
                     }
                 }
-                return null;
+                
+                if (!kingFound) {
+                    console.error(`King not found for ${color}`);
+                }
+                
+                return kingPosition;
             }
 
             isSquareUnderAttack(row, col, byColor) {
@@ -259,83 +311,85 @@
 
             isInCheck(color) {
                 const king = this.findKing(color);
+                if (!king) {
+                    console.error('King not found for', color, 'current board state:', this.board);
+                    return false;
+                }
                 const oppositeColor = color === 'WHITE' ? 'BLACK' : 'WHITE';
-                const check = this.isSquareUnderAttack(king.row, king.col, oppositeColor);
-                console.log('Checking if', color, 'king is in check', king, check);
                 return this.isSquareUnderAttack(king.row, king.col, oppositeColor);
             }
 
-            hasLegalMoves(color) {
-                const king = this.findKing(color);
-                console.log('Checking legal moves for', color);
-                
-                // Rest of legal moves check
-                for (let startRow = 0; startRow < 8; startRow++) {
-                    for (let startCol = 0; startCol < 8; startCol++) {
-                        const piece = this.board[startRow][startCol];
-                        if (piece && piece.color === color) {
-                            for (let endRow = 0; endRow < 8; endRow++) {
-                                for (let endCol = 0; endCol < 8; endCol++) {
-                                    // Try the move
-                                    const savedTarget = this.board[endRow][endCol];
-                                    const savedLastPawnMove = this.lastPawnDoubleMove;
-                                    this.board[endRow][endCol] = piece;
-                                    this.board[startRow][startCol] = null;
+            evaluateMove(startRow, startCol, endRow, endCol, color) {
+                const piece = this.board[startRow][startCol];
+                if (!piece || piece.color !== color) return false;
 
-                                    const movePutsInCheck = this.isInCheck(color);
+                // Try the move
+                const savedTarget = this.board[endRow][endCol];
+                const savedLastPawnMove = this.lastPawnDoubleMove;
+                this.board[endRow][endCol] = { ...piece };
+                this.board[startRow][startCol] = null;
 
-                                    // Undo move
-                                    this.board[startRow][startCol] = piece;
-                                    this.board[endRow][endCol] = savedTarget;
-                                    this.lastPawnDoubleMove = savedLastPawnMove;
+                // Check if this move would leave or put king in check
+                const movePutsInCheck = this.isInCheck(color);
 
-                                    if (!movePutsInCheck) {
-                                        console.log('Legal move found for', color, piece, startRow, startCol, endRow, endCol);
-                                        return true;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                console.log('No legal moves found for', color);
-                return false;
+                // Restore the board
+                this.board[startRow][startCol] = piece;
+                this.board[endRow][endCol] = savedTarget;
+                this.lastPawnDoubleMove = savedLastPawnMove;
+
+                return !movePutsInCheck;
             }
 
-            isCheckmate(color) {
-                const check = this.isInCheck(color);
-                const hasLegalMoves = this.hasLegalMoves(color);
-                console.log('Checking checkmate for', color, 'is in check:',  check, 'has moves:', hasLegalMoves);
-                const checkmate = this.isInCheck(color) && !this.hasLegalMoves(color);
-                console.log('Checking checkmate for', color, checkmate);
-                const king = this.findKing(color);
-                return checkmate
+            hasLegalMoves(color) {
+                if (color === this.currentPlayer) {
+                    return this.validMovesCache.size > 0;
+                }
+                // Fall back to computation for non-current player
+                return super.hasLegalMoves(color);
             }
 
             movePiece(startRow, startCol, endRow, endCol) {
+                const piece = this.board[startRow][startCol];
+                
                 if (!this.isValidMove(startRow, startCol, endRow, endCol)) {
                     this.log('Invalid move attempted');
                     return false;
                 }
 
-                const piece = this.board[startRow][startCol];
                 const targetSquare = this.board[endRow][endCol];
-
                 if (targetSquare && targetSquare.color === piece.color) return false;
+                
+                // Don't allow moving the last king
+                if (piece.type === 'KING') {
+                    const oppositeColor = piece.color === 'WHITE' ? 'BLACK' : 'WHITE';
+                    if (!this.findKing(oppositeColor)) {
+                        console.error('Cannot move last remaining king');
+                        return false;
+                    }
+                }
 
-                // Make move temporarily to check if it puts/leaves OWN king in check
+                // Make temporary move to check for king safety
+                const savedPiece = { ...piece };
                 const savedTarget = this.board[endRow][endCol];
                 const savedLastPawnMove = this.lastPawnDoubleMove;
-                this.board[endRow][endCol] = piece;
+                
+                this.board[endRow][endCol] = savedPiece;
                 this.board[startRow][startCol] = null;
 
-                // Only check if move leaves own king in check
+                // Verify both kings are still on board and check for check
+                const whiteKing = this.findKing('WHITE');
+                const blackKing = this.findKing('BLACK');
                 const movePutsOwnKingInCheck = this.isInCheck(piece.color);
-
-                // Undo temporary move
+                
+                // Restore board state
                 this.board[startRow][startCol] = piece;
                 this.board[endRow][endCol] = savedTarget;
                 this.lastPawnDoubleMove = savedLastPawnMove;
+
+                if (!whiteKing || !blackKing) {
+                    console.error('Invalid move - would remove king from board');
+                    return false;
+                }
 
                 if (movePutsOwnKingInCheck) {
                     console.log('Move puts own king in check');
@@ -345,73 +399,122 @@
                 // Reset last pawn double move
                 this.lastPawnDoubleMove = null;
 
-                // Handle pawn double move
-                if (piece.type === 'PAWN' && Math.abs(startRow - endRow) === 2) {
-                    this.lastPawnDoubleMove = { row: endRow, col: endCol };
+                // Handle special moves
+                if (piece.type === 'PAWN') {
+                    // Handle pawn double move
+                    if (Math.abs(startRow - endRow) === 2) {
+                        this.lastPawnDoubleMove = { row: endRow, col: endCol };
+                    }
+                    // Handle en passant capture
+                    else if (Math.abs(startCol - endCol) === 1 && !targetSquare) {
+                        this.board[startRow][endCol] = null;
+                    }
+                    // Handle promotion
+                    if (endRow === 0 || endRow === 7) {
+                        this.board[endRow][endCol] = { type: 'QUEEN', color: piece.color, hasMoved: true };
+                        this.board[startRow][startCol] = null;
+                        // Skip the normal move as we've handled it
+                        this.afterMove(piece);
+                        return true;
+                    }
                 }
-
-                // Handle en passant capture
-                if (piece.type === 'PAWN' && Math.abs(startCol - endCol) === 1 && !targetSquare) {
-                    // Remove the captured pawn
-                    this.board[startRow][endCol] = null;
-                }
-
                 // Handle castling
-                if (piece.type === 'KING' && Math.abs(startCol - endCol) === 2) {
+                else if (piece.type === 'KING' && Math.abs(startCol - endCol) === 2) {
                     const direction = endCol > startCol ? 1 : -1;
                     const rookCol = direction === 1 ? 7 : 0;
                     const newRookCol = direction === 1 ? endCol - 1 : endCol + 1;
                     
-                    // Move rook - Create a copy of the rook to preserve its properties
                     const rook = { ...this.board[startRow][rookCol] };
-                    this.board[endRow][newRookCol] = rook;
+                    this.board[endRow][newRookCol] = { ...rook, hasMoved: true };
                     this.board[startRow][rookCol] = null;
-                    this.board[endRow][newRookCol].hasMoved = true;
-
-                    // Move king separately
-                    this.board[endRow][endCol] = { ...piece, hasMoved: true };
-                    this.board[startRow][startCol] = null;
-                } else {
-                    // Regular move
-                    this.board[endRow][endCol] = { ...piece, hasMoved: true };
-                    this.board[startRow][startCol] = null;
                 }
 
-                // Remove the redundant piece move after castling
-                // piece.hasMoved = true; // Remove this line as we're now handling it in the moves
+                // Make the actual move
+                this.board[endRow][endCol] = { ...piece, hasMoved: true };
+                this.board[startRow][startCol] = null;
 
-                // Pawn promotion
-                if (piece.type === 'PAWN' && (endRow === 0 || endRow === 7)) {
-                    this.board[endRow][endCol] = { type: 'QUEEN', color: piece.color, hasMoved: true };
-                }
-                console.log('Moved', piece, 'from', startRow, startCol, 'to', endRow, endCol);
-                console.log('switching player');
+                this.afterMove(piece);
+                return true;
+            }
+
+            afterMove(piece) {
+                const previousPlayer = this.currentPlayer;
                 this.currentPlayer = this.currentPlayer === 'WHITE' ? 'BLACK' : 'WHITE';
+                this.computeAllValidMoves(); // Compute valid moves for next player
                 
-                // Update game status (replace the existing check status code)
-                if (this.isCheckmate(this.currentPlayer)) {
-                    const winner = this.currentPlayer === 'WHITE' ? 'Black' : 'White';
-                    document.getElementById('status').textContent = `Checkmate! ${winner} wins!`;
-                    this.log(`Checkmate! ${winner} wins!`);
-                    // Disable further moves
+                // Check game state
+                const inCheck = this.isInCheck(this.currentPlayer);
+                const hasLegalMoves = this.hasLegalMoves(this.currentPlayer);
+                
+                // Update game status
+                const status = document.getElementById('status');
+                
+                if (inCheck && !hasLegalMoves) {
+                    // Checkmate
+                    status.textContent = `Checkmate! ${piece.color} wins!`;
+                    this.log(`Checkmate! ${piece.color} wins!`);
                     this.gameOver = true;
-                } else if (this.isInCheck(this.currentPlayer)) {
-                    document.getElementById('status').textContent = 'Check!';
+                } else if (inCheck) {
+                    // Check
+                    status.textContent = `${this.currentPlayer} is in check!`;
                     this.log(`${this.currentPlayer} is in check!`);
+                } else if (!hasLegalMoves) {
+                    // Stalemate
+                    status.textContent = 'Stalemate! Game is a draw.';
+                    this.log('Stalemate! Game is a draw.');
+                    this.gameOver = true;
                 } else {
-                    document.getElementById('status').textContent = '';
+                    status.textContent = '';
                 }
-
-                const moveNotation = `${piece.color} ${piece.type} from ${String.fromCharCode(97 + startCol)}${8 - startRow} to ${String.fromCharCode(97 + endCol)}${8 - endRow}`;
-                this.log(moveNotation);
 
                 document.getElementById('turn').textContent = `${this.currentPlayer}'s turn`;
-                return true;
+            }
+
+            computeAllValidMoves() {
+                this.validMovesCache.clear();
+                
+                for (let startRow = 0; startRow < 8; startRow++) {
+                    for (let startCol = 0; startCol < 8; startCol++) {
+                        const piece = this.board[startRow][startCol];
+                        if (!piece || piece.color !== this.currentPlayer) continue;
+
+                        const key = `${startRow},${startCol}`;
+                        const validMoves = [];
+
+                        for (let endRow = 0; endRow < 8; endRow++) {
+                            for (let endCol = 0; endCol < 8; endCol++) {
+                                // Skip if destination has friendly piece
+                                const targetPiece = this.board[endRow][endCol];
+                                if (targetPiece && targetPiece.color === this.currentPlayer) {
+                                    continue;
+                                }
+
+                                if (this.isValidMove(startRow, startCol, endRow, endCol) &&
+                                    this.evaluateMove(startRow, startCol, endRow, endCol, this.currentPlayer)) {
+                                    validMoves.push({ row: endRow, col: endCol });
+                                }
+                            }
+                        }
+
+                        if (validMoves.length > 0) {
+                            this.validMovesCache.set(key, validMoves);
+                        }
+                    }
+                }
+            }
+
+            getValidMovesForPiece(row, col) {
+                const key = `${row},${col}`;
+                return this.validMovesCache.get(key) || [];
             }
 
             renderBoard() {
                 const boardElement = document.getElementById('board');
                 boardElement.innerHTML = '';
+
+                // Get valid moves if a piece is selected
+                const validMoves = this.selectedPiece ? 
+                    this.getValidMovesForPiece(this.selectedPiece.row, this.selectedPiece.col) : [];
 
                 for (let row = 0; row < 8; row++) {
                     for (let col = 0; col < 8; col++) {
@@ -419,6 +522,24 @@
                         square.className = `square ${(row + col) % 2 ? 'black' : 'white'}`;
                         
                         const piece = this.board[row][col];
+                        
+                        // Highlight valid moves
+                        const isValidMove = validMoves.some(move => move.row === row && move.col === col);
+                        if (isValidMove) {
+                            square.classList.add('valid-move');
+                            // Add special highlighting for captures
+                            if (piece && piece.color !== this.currentPlayer) {
+                                square.classList.add('valid-capture');
+                            }
+                        }
+
+                        // Highlight selected piece
+                        if (this.selectedPiece && 
+                            row === this.selectedPiece.row && 
+                            col === this.selectedPiece.col) {
+                            square.classList.add('selected');
+                        }
+
                         if (piece) {
                             square.textContent = PIECES[piece.color][piece.type];
                         }
@@ -432,29 +553,41 @@
             }
 
             handleSquareClick(event) {
-                // console.log('Square clicked', event.target.dataset.row, event.target.dataset.col);
                 if (this.gameOver) {
                     this.log('Game is already over');
                     return;
                 }
+
                 const row = parseInt(event.target.dataset.row);
                 const col = parseInt(event.target.dataset.col);
+                const piece = this.board[row][col];
 
-                if (this.selectedPiece) {
-                    const startRow = this.selectedPiece.row;
-                    const startCol = this.selectedPiece.col;
-
-                    if (this.movePiece(startRow, startCol, row, col)) {
-                        this.renderBoard();
-                    }
+                // Clicking on an already selected piece
+                if (this.selectedPiece && 
+                    this.selectedPiece.row === row && 
+                    this.selectedPiece.col === col) {
                     this.selectedPiece = null;
-                } else {
-                    const piece = this.board[row][col];
-                    if (piece && piece.color === this.currentPlayer) {
-                        this.selectedPiece = { row, col };
-                        event.target.classList.add('selected');
-                        console.log('Selected piece', piece, row, col);
+                    this.renderBoard();
+                    return;
+                }
+
+                // Clicking on a valid move for selected piece
+                if (this.selectedPiece) {
+                    const validMoves = this.getValidMovesForPiece(this.selectedPiece.row, this.selectedPiece.col);
+                    const isValidMove = validMoves.some(move => move.row === row && move.col === col);
+
+                    if (isValidMove) {
+                        this.movePiece(this.selectedPiece.row, this.selectedPiece.col, row, col);
+                        this.selectedPiece = null;
+                        this.renderBoard();
+                        return;
                     }
+                }
+
+                // Selecting a new piece
+                if (piece && piece.color === this.currentPlayer) {
+                    this.selectedPiece = { row, col };
+                    this.renderBoard();
                 }
             }
         }
