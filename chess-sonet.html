@@ -145,11 +145,27 @@
         }
 
         #turn {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 5px 0;
             font-size: 1.5em;
             font-weight: 500;
             color: #00ffff;
             text-shadow: 0 0 10px #00ffff;
             margin-bottom: 10px;
+        }
+
+        .turn-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .move-counter {
+            color: #ff00ff;
+            font-size: 0.9em;
+            text-shadow: 0 0 10px #ff00ff;
         }
 
         #status {
@@ -248,11 +264,6 @@
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
-        }
-
-        #turn {
-            display: flex;
-            align-items: center;
         }
 
         .difficulty-control {
@@ -377,7 +388,13 @@
         </div>
         <div class="game-right">
             <div class="game-info">
-                <div id="turn">White's turn</div>
+                <div id="turn">
+                    <div class="turn-info">
+                        <span>White's turn</span>
+                        <div id="ai-spinner" class="spinner"></div>
+                    </div>
+                    <span class="move-counter">Move: 1</span>
+                </div>
                 <div id="status"></div>
             </div>
             <div class="game-log" id="game-log"></div>
@@ -421,6 +438,8 @@
                 this.isAIEnabled = true; // Add this line
                 this.searchDepth = 3; // Add default search depth
                 this.initializeControls(); // Add this line
+                this.moveCounter = 1; // Full moves (each player's turn = 1 move)
+                this.halfMoveCounter = 1; // Individual turns
             }
 
             initializeLogging() {
@@ -783,6 +802,25 @@
                 this.currentPlayer = this.currentPlayer === 'WHITE' ? 'BLACK' : 'WHITE';
                 this.computeAllValidMoves(); // Compute valid moves for next player
                 
+                // Update move counters
+                this.halfMoveCounter++;
+                if (this.currentPlayer === 'WHITE') {
+                    this.moveCounter++;
+                }
+
+                // Update turn display
+                const turnElement = document.getElementById('turn');
+                turnElement.innerHTML = `
+                    <div class="turn-info">
+                        <span>${this.currentPlayer}'s turn</span>
+                        <div id="ai-spinner" class="spinner"></div>
+                    </div>
+                    <span class="move-counter">Move: ${this.moveCounter} (${this.halfMoveCounter})</span>
+                `;
+
+                // Hide spinner immediately after creating it
+                document.getElementById('ai-spinner').style.display = 'none';
+
                 // Check game state
                 const inCheck = this.isInCheck(this.currentPlayer);
                 const hasLegalMoves = this.hasLegalMoves(this.currentPlayer);
@@ -820,12 +858,6 @@
                     status.textContent = '';
                 }
 
-                // Update turn display while keeping spinner hidden by default
-                const turnElement = document.getElementById('turn');
-                turnElement.innerHTML = `${this.currentPlayer}'s turn<div id="ai-spinner" class="spinner"></div>`;
-                // Hide spinner immediately after creating it
-                document.getElementById('ai-spinner').style.display = 'none';
-                
                 // Render immediately after white's move
                 this.renderBoard();
                 
