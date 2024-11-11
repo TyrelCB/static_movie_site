@@ -762,124 +762,98 @@
             }
 
             minimax(depth, alpha, beta, maximizingPlayer) {
-                // Check if kings exist before evaluation
-                if (!this.findKing('WHITE') || !this.findKing('BLACK')) {
-                    return maximizingPlayer ? -Infinity : Infinity;
-                }
-
+                // Check for leaf node
                 if (depth === 0) {
                     return this.evaluatePosition('BLACK');
                 }
 
-                if (maximizingPlayer) {
-                    let maxScore = -Infinity;
-                    for (let startRow = 0; startRow < 8; startRow++) {
-                        for (let startCol = 0; startCol < 8; startCol++) {
-                            const piece = this.board[startRow][startCol];
-                            if (!piece || piece.color !== 'BLACK') continue;
+                const currentColor = maximizingPlayer ? 'BLACK' : 'WHITE';
+                const savedPlayer = this.currentPlayer;
+                this.currentPlayer = currentColor;
 
-                            for (let endRow = 0; endRow < 8; endRow++) {
-                                for (let endCol = 0; endCol < 8; endCol++) {
-                                    if (this.isValidMove(startRow, startCol, endRow, endCol) &&
-                                        this.evaluateMove(startRow, startCol, endRow, endCol, 'BLACK')) {
-                                        
-                                        // Make move
-                                        const savedTarget = this.board[endRow][endCol];
-                                        this.board[endRow][endCol] = piece;
-                                        this.board[startRow][startCol] = null;
-
-                                        const score = this.minimax(depth - 1, alpha, beta, false);
-
-                                        // Undo move
-                                        this.board[startRow][startCol] = piece;
-                                        this.board[endRow][endCol] = savedTarget;
-
-                                        maxScore = Math.max(maxScore, score);
-                                        alpha = Math.max(alpha, score);
-                                        if (beta <= alpha) break;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    return maxScore;
-                } else {
-                    let minScore = Infinity;
-                    for (let startRow = 0; startRow < 8; startRow++) {
-                        for (let startCol = 0; startCol < 8; startCol++) {
-                            const piece = this.board[startRow][startCol];
-                            if (!piece || piece.color !== 'WHITE') continue;
-
-                            for (let endRow = 0; endRow < 8; endRow++) {
-                                for (let endCol = 0; endCol < 8; endCol++) {
-                                    if (this.isValidMove(startRow, startCol, endRow, endCol) &&
-                                        this.evaluateMove(startRow, startCol, endRow, endCol, 'WHITE')) {
-                                        
-                                        // Make move
-                                        const savedTarget = this.board[endRow][endCol];
-                                        this.board[endRow][endCol] = piece;
-                                        this.board[startRow][startCol] = null;
-
-                                        const score = this.minimax(depth - 1, alpha, beta, true);
-
-                                        // Undo move
-                                        this.board[startRow][startCol] = piece;
-                                        this.board[endRow][endCol] = savedTarget;
-
-                                        minScore = Math.min(minScore, score);
-                                        beta = Math.min(beta, score);
-                                        if (beta <= alpha) break;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    return minScore;
-                }
-            }
-
-            findBestMove() {
-                let bestScore = -Infinity;
-                let bestMove = null;
-                const depth = 1;
+                let bestScore = maximizingPlayer ? -Infinity : Infinity;
                 
-                // Verify kings before starting search
-                if (!this.findKing('WHITE') || !this.findKing('BLACK')) {
-                    console.error('Kings missing before search');
-                    return null;
-                }
-
                 for (let startRow = 0; startRow < 8; startRow++) {
-                    for (let startCol = 0; startCol < 8; startCol++) {    // Fix: add < 8
+                    for (let startCol = 0; startCol < 8; startCol++) {
                         const piece = this.board[startRow][startCol];
-                        if (!piece || piece.color !== 'BLACK') continue;
+                        if (!piece || piece.color !== currentColor) continue;
 
                         for (let endRow = 0; endRow < 8; endRow++) {
-                            for (let endCol = 0; endCol < 8; endCol++) {  // Fix: add < 8
+                            for (let endCol = 0; endCol < 8; endCol++) {
                                 if (this.isValidMove(startRow, startCol, endRow, endCol) &&
-                                    this.evaluateMove(startRow, startCol, endRow, endCol, 'BLACK')) {
+                                    this.evaluateMove(startRow, startCol, endRow, endCol, currentColor)) {
                                     
                                     // Make move
                                     const savedTarget = this.board[endRow][endCol];
                                     this.board[endRow][endCol] = piece;
                                     this.board[startRow][startCol] = null;
 
-                                    const score = this.minimax(depth - 1, -Infinity, Infinity, false);
+                                    const score = this.minimax(depth - 1, alpha, beta, !maximizingPlayer);
 
                                     // Undo move
                                     this.board[startRow][startCol] = piece;
                                     this.board[endRow][endCol] = savedTarget;
 
-                                    if (score > bestScore) {
-                                        bestScore = score;
-                                        bestMove = { startRow, startCol, endRow, endCol };
-                                        console.log('New best move:', bestMove, 'Score:', bestScore);
+                                    if (maximizingPlayer) {
+                                        bestScore = Math.max(bestScore, score);
+                                        alpha = Math.max(alpha, score);
+                                    } else {
+                                        bestScore = Math.min(bestScore, score);
+                                        beta = Math.min(beta, score);
+                                    }
+
+                                    if (beta <= alpha) {
+                                        this.currentPlayer = savedPlayer;
+                                        return bestScore;
                                     }
                                 }
                             }
                         }
                     }
                 }
+
+                this.currentPlayer = savedPlayer;
+                return bestScore;
+            }
+
+            findBestMove() {
+                let bestScore = -Infinity;
+                let bestMove = null;
+                const depth = 4; // Increased depth
+                
+                const savedPlayer = this.currentPlayer;
+                this.currentPlayer = 'BLACK';
+
+                for (let startRow = 0; startRow < 8; startRow++) {
+                    for (let startCol = 0; startCol < 8; startCol++) {
+                        const piece = this.board[startRow][startCol];
+                        if (!piece || piece.color !== 'BLACK') continue;
+
+                        for (let endRow = 0; endRow < 8; endRow++) {
+                            for (let endCol = 0; endCol < 8; endCol++) {
+                                if (this.isValidMove(startRow, startCol, endRow, endCol) &&
+                                    this.evaluateMove(startRow, startCol, endRow, endCol, 'BLACK')) {
+                                    
+                                    const savedTarget = this.board[endRow][endCol];
+                                    this.board[endRow][endCol] = piece;
+                                    this.board[startRow][startCol] = null;
+
+                                    const score = this.minimax(depth - 1, -Infinity, Infinity, false);
+
+                                    this.board[startRow][startCol] = piece;
+                                    this.board[endRow][endCol] = savedTarget;
+
+                                    if (score > bestScore) {
+                                        bestScore = score;
+                                        bestMove = { startRow, startCol, endRow, endCol };
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                this.currentPlayer = savedPlayer;
                 return bestMove;
             }
 
