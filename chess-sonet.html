@@ -292,6 +292,75 @@
             align-items: center;
             text-shadow: 0 0 5px #00ffff;
         }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: #1a1a2e;
+            padding: 30px;
+            border-radius: 12px;
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+            border: 2px solid #00ffff;
+            box-shadow: 0 0 30px #00ffff80;
+            animation: modalAppear 0.3s ease-out;
+        }
+
+        @keyframes modalAppear {
+            from {
+                transform: scale(0.8);
+                opacity: 0;
+            }
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .modal h2 {
+            color: #00ffff;
+            margin: 0 0 20px 0;
+            text-shadow: 0 0 10px #00ffff;
+        }
+
+        .modal p {
+            color: #ffffff;
+            margin: 0 0 30px 0;
+            font-size: 1.2em;
+        }
+
+        .modal-button {
+            background: #00ffff;
+            color: #1a1a2e;
+            border: none;
+            padding: 10px 30px;
+            border-radius: 5px;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .modal-button:hover {
+            background: #ff00ff;
+            box-shadow: 0 0 15px #ff00ff;
+            transform: scale(1.05);
+        }
     </style>
 </head>
 <body>
@@ -312,6 +381,14 @@
                 <div id="status"></div>
             </div>
             <div class="game-log" id="game-log"></div>
+        </div>
+    </div>
+
+    <div id="checkmateModal" class="modal">
+        <div class="modal-content">
+            <h2>Game Over!</h2>
+            <p id="modalMessage"></p>
+            <button class="modal-button" onclick="location.reload()">Play Again</button>
         </div>
     </div>
 
@@ -718,6 +795,12 @@
                     status.textContent = `Checkmate! ${piece.color} wins!`;
                     this.log(`Checkmate! ${piece.color} wins!`);
                     this.gameOver = true;
+                    
+                    // Show checkmate modal
+                    const modal = document.getElementById('checkmateModal');
+                    const modalMessage = document.getElementById('modalMessage');
+                    modalMessage.textContent = `${piece.color} wins the game!`;
+                    modal.classList.add('show');
                 } else if (inCheck) {
                     // Check
                     status.textContent = `${this.currentPlayer} is in check!`;
@@ -727,6 +810,12 @@
                     status.textContent = 'Stalemate! Game is a draw.';
                     this.log('Stalemate! Game is a draw.');
                     this.gameOver = true;
+                    
+                    // Show stalemate modal
+                    const modal = document.getElementById('checkmateModal');
+                    const modalMessage = document.getElementById('modalMessage');
+                    modalMessage.textContent = 'Game is a draw by stalemate!';
+                    modal.classList.add('show');
                 } else {
                     status.textContent = '';
                 }
