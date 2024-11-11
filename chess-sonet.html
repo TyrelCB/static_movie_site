@@ -260,7 +260,9 @@
             isInCheck(color) {
                 const king = this.findKing(color);
                 const oppositeColor = color === 'WHITE' ? 'BLACK' : 'WHITE';
-                return this.isSquareUnderAttack(king.row, king.col, oppositeColor);
+                const check = this.isSquareUnderAttack(king.row, king.col, oppositeColor);
+                console.log('Checking if', color, 'king is in check', king, check);
+                return king && this.isSquareUnderAttack(king.row, king.col, oppositeColor);
             }
 
             hasLegalMoves(color) {
@@ -297,6 +299,8 @@
             }
 
             isCheckmate(color) {
+                const checkmate = this.isInCheck(color) && !this.hasLegalMoves(color);
+                console.log('Checking checkmate for', color, checkmate);
                 return this.isInCheck(color) && !this.hasLegalMoves(color);
             }
 
@@ -326,6 +330,7 @@
                 this.lastPawnDoubleMove = savedLastPawnMove;
 
                 if (movePutsOwnKingInCheck) {
+                    console.log('Move puts own king in check');
                     return false;
                 }
 
@@ -364,7 +369,8 @@
                 if (piece.type === 'PAWN' && (endRow === 0 || endRow === 7)) {
                     this.board[endRow][endCol] = { type: 'QUEEN', color: piece.color, hasMoved: true };
                 }
-
+                console.log('Moved', piece, 'from', startRow, startCol, 'to', endRow, endCol);
+                console.log('switching player');
                 this.currentPlayer = this.currentPlayer === 'WHITE' ? 'BLACK' : 'WHITE';
                 
                 // Update game status (replace the existing check status code)
@@ -411,6 +417,7 @@
             }
 
             handleSquareClick(event) {
+                // console.log('Square clicked', event.target.dataset.row, event.target.dataset.col);
                 if (this.gameOver) {
                     this.log('Game is already over');
                     return;
@@ -431,6 +438,7 @@
                     if (piece && piece.color === this.currentPlayer) {
                         this.selectedPiece = { row, col };
                         event.target.classList.add('selected');
+                        console.log('Selected piece', piece, row, col);
                     }
                 }
             }
