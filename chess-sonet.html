@@ -9,11 +9,12 @@
         body {
             margin: 0;
             padding: 20px;
-            background: #476899;
+            background: #0a0a0f;
             font-family: 'Roboto', sans-serif;
             display: flex;
             justify-content: center;
             min-height: 100vh;
+            /* color: #00ff00; */
         }
 
         .game-container {
@@ -45,11 +46,12 @@
             aspect-ratio: 1;
             margin: 0 auto;
             border-radius: 4px;
-            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+            box-shadow: 0 0 20px #ff00ff, 0 0 40px #ff00ff80;
             overflow: hidden;
-            background: #fff;
+            background: #1a1a2e;
             display: grid;
             grid-template: repeat(8, 1fr) / repeat(8, 1fr);
+            border: 2px solid #ff00ff;
         }
 
         .square {
@@ -59,20 +61,60 @@
             font-size: min(5vw, 2.2em);
             cursor: pointer;
             transition: all 0.2s ease;
+            text-shadow: none; /* Remove existing text shadow */
+            position: relative;
+        }
+
+        /* White pieces get cyan glow */
+        .square:has(span.white-piece) {
+            color: #fff;
+            text-shadow: 0 0 10px #00ffff,
+                        0 0 20px #00ffff,
+                        0 0 30px #00ffff;
+        }
+
+        /* Black pieces get magenta glow */
+        .square:has(span.black-piece) {
+            color: #ffffff;
+            text-shadow: 0 0 10px #cc00ff,
+                        0 0 20px #00ff88,
+                        0 0 30px #ff00ff;
+        }
+
+        .white-piece {
+            color: #fff;
+            filter: brightness(1.2);
+        }
+
+        .black-piece {
+            color: #000000;
+            filter: brightness(1.2);
+        }
+
+        /* Enhance selected piece glow */
+        .selected:has(span.white-piece) {
+            background: #103040 !important;
+            box-shadow: inset 0 0 30px #00ffff;
+        }
+
+        .selected:has(span.black-piece) {
+            background: #401040 !important;
+            box-shadow: inset 0 0 30px #ff00ff;
         }
 
         .square:hover {
             transform: scale(1.05);
             z-index: 1;
+            box-shadow: inset 0 0 20px #00ffff80;
         }
 
-        .white { background: #f8f9fa; }
-        .black { background: #6c757d; }
+        .white { background: #1a1a2e; }
+        .black { background: #2a2a4e; }
         
         .selected { 
-            background: #00b7ff !important;
-            box-shadow: inset 0 0 20px rgba(0,0,0,0.1);
-            text-shadow: #3498db 0 0 2px;
+            background: #4a1a4e !important;
+            box-shadow: inset 0 0 30px #ff00ff;
+            text-shadow: 0 0 15px #ff00ff;
         }
 
         .valid-move::after {
@@ -80,53 +122,57 @@
             position: absolute;
             width: 25px;
             height: 25px;
-            background: #2bff00;
+            background: #00ffff40;
+            border: 2px solid #00ffff;
             border-radius: 50%;
-            opacity: 0.6;
+            box-shadow: 0 0 10px #00ffff;
+            opacity: 0.8;
             transition: all 0.2s ease;
         }
 
         .valid-capture::after {
-            /* width: 100%;
-            height: 100%; */
-            border: 15px solid #ff0000;
-            background: none;
-            box-sizing: border-box;
+            border: 2px solid #ff00ff;
+            background: #ff00ff40;
+            box-shadow: 0 0 10px #ff00ff;
         }
 
         .game-info {
-            background: #fff;
+            background: #1a1a2e;
             padding: 20px;
             border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            box-shadow: 0 0 15px #00ffff80;
+            border: 1px solid #00ffff;
         }
 
         #turn {
             font-size: 1.5em;
             font-weight: 500;
-            color: #343a40;
+            color: #00ffff;
+            text-shadow: 0 0 10px #00ffff;
             margin-bottom: 10px;
         }
 
         #status {
             font-size: 1.2em;
-            color: #6c757d;
+            color: #ff00ff;
+            text-shadow: 0 0 10px #ff00ff;
             font-weight: 300;
         }
 
         .game-log {
-            background: #fff;
+            background: #1a1a2e;
             padding: 20px;
             border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            box-shadow: 0 0 15px #00ffff80;
+            border: 1px solid #00ffff;
             max-height: 300px;
             overflow-y: auto;
         }
 
         .log-entry {
             padding: 8px;
-            border-bottom: 1px solid #f0f2f5;
-            color: #495057;
+            border-bottom: 1px solid #2a2a4e;
+            color: #00ffff;
             font-size: 0.9em;
         }
 
@@ -190,12 +236,13 @@
             display: none;  /* Changed from display: inline-block */
             width: 20px;
             height: 20px;
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #3498db;
+            border: 3px solid #1a1a2e;
+            border-top: 3px solid #00ffff;
             border-radius: 50%;
             margin-left: 10px;
             animation: spin 1s linear infinite;
             vertical-align: middle;
+            box-shadow: 0 0 15px #00ffff;
         }
 
         @keyframes spin {
@@ -209,24 +256,41 @@
         }
 
         .difficulty-control {
-            background: #fff;
+            background: #1a1a2e;
             padding: 20px;
             border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            box-shadow: 0 0 15px #00ffff80;
+            border: 1px solid #00ffff;
             margin-bottom: 20px;
         }
 
         .difficulty-slider {
             width: 100%;
             margin: 10px 0;
+            appearance: none;
+            height: 4px;
+            background: #2a2a4e;
+            border-radius: 2px;
+            outline: none;
+        }
+
+        .difficulty-slider::-webkit-slider-thumb {
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background: #ff00ff;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 15px #ff00ff;
         }
 
         .difficulty-label {
             font-size: 1.1em;
-            color: #343a40;
+            color: #00ffff;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            text-shadow: 0 0 5px #00ffff;
         }
     </style>
 </head>
@@ -313,6 +377,11 @@
             }
 
             isValidMove(startRow, startCol, endRow, endCol) {
+                // Add boundary checks
+                if (!this.isValidPosition(startRow, startCol) || !this.isValidPosition(endRow, endCol)) {
+                    return false;
+                }
+                
                 const piece = this.board[startRow][startCol];
                 if (!piece || piece.color !== this.currentPlayer) return false;
 
@@ -331,6 +400,11 @@
                         return this.isValidKingMove(startRow, startCol, endRow, endCol);
                 }
                 return false;
+            }
+
+            // Add this new helper method after constructor
+            isValidPosition(row, col) {
+                return row >= 0 && row < 8 && col >= 0 && col < 8;
             }
 
             isValidPawnMove(startRow, startCol, endRow, endCol) {
@@ -742,7 +816,10 @@
                         }
 
                         if (piece) {
-                            square.textContent = PIECES[piece.color][piece.type];
+                            const pieceSpan = document.createElement('span');
+                            pieceSpan.className = `${piece.color.toLowerCase()}-piece`;
+                            pieceSpan.textContent = PIECES[piece.color][piece.type];
+                            square.appendChild(pieceSpan);
                         }
 
                         square.dataset.row = row;
@@ -759,8 +836,23 @@
                     return;
                 }
 
-                const row = parseInt(event.target.dataset.row);
-                const col = parseInt(event.target.dataset.col);
+                // Get row and col from clicked element or its parent
+                let row, col;
+                if (event.target.dataset.row) {
+                    row = parseInt(event.target.dataset.row);
+                    col = parseInt(event.target.dataset.col);
+                } else if (event.target.parentElement.dataset.row) {
+                    row = parseInt(event.target.parentElement.dataset.row);
+                    col = parseInt(event.target.parentElement.dataset.col);
+                } else {
+                    return; // Invalid click target
+                }
+
+                // Validate position
+                if (!this.isValidPosition(row, col)) {
+                    return;
+                }
+
                 const piece = this.board[row][col];
 
                 // Clicking on an already selected piece
