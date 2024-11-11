@@ -179,6 +179,7 @@
                 this.initializeLogging();
                 this.validMovesCache = new Map(); // Add cache for valid moves
                 this.computeAllValidMoves(); // Initial computation
+                this.isAIEnabled = true; // Add this line
             }
 
             initializeLogging() {
@@ -553,6 +554,11 @@
                 }
 
                 document.getElementById('turn').textContent = `${this.currentPlayer}'s turn`;
+                
+                // Add this at the end
+                if (this.currentPlayer === 'BLACK' && !this.gameOver) {
+                    this.makeAIMove();
+                }
             }
 
             computeAllValidMoves() {
@@ -673,6 +679,79 @@
                 if (piece && piece.color === this.currentPlayer) {
                     this.selectedPiece = { row, col };
                     this.renderBoard();
+                }
+            }
+
+            evaluatePosition(color) {
+                const pieceValues = {
+                    'PAWN': 1,
+                    'KNIGHT': 3,
+                    'BISHOP': 3,
+                    'ROOK': 5,
+                    'QUEEN': 9,
+                    'KING': 0
+                };
+
+                let score = 0;
+                for (let row = 0; row < 8; row++) {
+                    for (let col = 0; col < 8; col++) {
+                        const piece = this.board[row][col];
+                        if (piece) {
+                            const value = pieceValues[piece.type] * (piece.color === color ? 1 : -1);
+                            score += value;
+                        }
+                    }
+                }
+                return score;
+            }
+
+            findBestMove() {
+                let bestScore = -Infinity;
+                let bestMove = null;
+
+                // Fix the for-loop conditions
+                for (let startRow = 0; startRow < 8; startRow++) {
+                    for (let startCol = 0; startCol < 8; startCol++) {    // Fix: add < 8
+                        const piece = this.board[startRow][startCol];
+                        if (!piece || piece.color !== 'BLACK') continue;
+
+                        for (let endRow = 0; endRow < 8; endRow++) {
+                            for (let endCol = 0; endCol < 8; endCol++) {  // Fix: add < 8
+                                if (this.isValidMove(startRow, startCol, endRow, endCol) &&
+                                    this.evaluateMove(startRow, startCol, endRow, endCol, 'BLACK')) {
+                                    
+                                    // Try the move
+                                    const savedTarget = this.board[endRow][endCol];
+                                    this.board[endRow][endCol] = piece;
+                                    this.board[startRow][startCol] = null;
+
+                                    // Evaluate position after move
+                                    const score = this.evaluatePosition('BLACK');
+
+                                    // Restore the board
+                                    this.board[startRow][startCol] = piece;
+                                    this.board[endRow][endCol] = savedTarget;
+
+                                    if (score > bestScore) {
+                                        bestScore = score;
+                                        bestMove = { startRow, startCol, endRow, endCol };
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                return bestMove;
+            }
+
+            makeAIMove() {
+                if (!this.isAIEnabled || this.currentPlayer !== 'BLACK' || this.gameOver) return;
+                
+                const move = this.findBestMove();
+                if (move) {
+                    setTimeout(() => {
+                        this.movePiece(move.startRow, move.startCol, move.endRow, move.endCol);
+                    }, 500); // Add slight delay for better UX
                 }
             }
         }
