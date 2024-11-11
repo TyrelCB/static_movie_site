@@ -137,6 +137,29 @@
                 max-width: 400px;
             }
         }
+
+        .spinner {
+            display: none;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3498db;
+            border-radius: 50%;
+            margin-left: 10px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        #turn {
+            display: flex;
+            align-items: center;
+        }
     </style>
 </head>
 <body>
@@ -146,7 +169,7 @@
         </div>
         <div class="game-right">
             <div class="game-info">
-                <div id="turn">White's turn</div>
+                <div id="turn">White's turn<div id="ai-spinner" class="spinner"></div></div>
                 <div id="status"></div>
             </div>
             <div class="game-log" id="game-log"></div>
@@ -553,7 +576,8 @@
                     status.textContent = '';
                 }
 
-                document.getElementById('turn').textContent = `${this.currentPlayer}'s turn`;
+                document.getElementById('turn').innerHTML = 
+                    `${this.currentPlayer}'s turn<div id="ai-spinner" class="spinner"></div>`;
                 
                 // Add this at the end
                 if (this.currentPlayer === 'BLACK' && !this.gameOver) {
@@ -684,32 +708,131 @@
 
             evaluatePosition(color) {
                 const pieceValues = {
-                    'PAWN': 1,
-                    'KNIGHT': 3,
-                    'BISHOP': 3,
-                    'ROOK': 5,
-                    'QUEEN': 9,
-                    'KING': 0
+                    'PAWN': 100,
+                    'KNIGHT': 320,
+                    'BISHOP': 330,
+                    'ROOK': 500,
+                    'QUEEN': 900,
+                    'KING': 20000
                 };
+
+                // Positional bonuses for pieces
+                const pawnPositionBonus = [
+                    [0,  0,  0,  0,  0,  0,  0,  0],
+                    [50, 50, 50, 50, 50, 50, 50, 50],
+                    [10, 10, 20, 30, 30, 20, 10, 10],
+                    [5,  5, 10, 25, 25, 10,  5,  5],
+                    [0,  0,  0, 20, 20,  0,  0,  0],
+                    [5, -5,-10,  0,  0,-10, -5,  5],
+                    [5, 10, 10,-20,-20, 10, 10,  5],
+                    [0,  0,  0,  0,  0,  0,  0,  0]
+                ];
 
                 let score = 0;
                 for (let row = 0; row < 8; row++) {
                     for (let col = 0; col < 8; col++) {
                         const piece = this.board[row][col];
                         if (piece) {
-                            const value = pieceValues[piece.type] * (piece.color === color ? 1 : -1);
-                            score += value;
+                            // Material value
+                            let value = pieceValues[piece.type];
+                            
+                            // Position value
+                            if (piece.type === 'PAWN') {
+                                const positionRow = piece.color === 'WHITE' ? row : 7 - row;
+                                value += pawnPositionBonus[positionRow][col];
+                            }
+
+                            // Center control bonus for minor pieces
+                            if (['KNIGHT', 'BISHOP'].includes(piece.type)) {
+                                if ((row === 3 || row === 4) && (col === 3 || col === 4)) {
+                                    value += 10;
+                                }
+                            }
+
+                            score += value * (piece.color === color ? 1 : -1);
                         }
                     }
                 }
                 return score;
             }
 
+            minimax(depth, alpha, beta, maximizingPlayer) {
+                if (depth === 0) {
+                    return this.evaluatePosition('BLACK');
+                }
+
+                if (maximizingPlayer) {
+                    let maxScore = -Infinity;
+                    for (let startRow = 0; startRow < 8; startRow++) {
+                        for (let startCol = 0; startCol < 8; startCol++) {
+                            const piece = this.board[startRow][startCol];
+                            if (!piece || piece.color !== 'BLACK') continue;
+
+                            for (let endRow = 0; endRow < 8; endRow++) {
+                                for (let endCol = 0; endCol < 8; endCol++) {
+                                    if (this.isValidMove(startRow, startCol, endRow, endCol) &&
+                                        this.evaluateMove(startRow, startCol, endRow, endCol, 'BLACK')) {
+                                        
+                                        // Make move
+                                        const savedTarget = this.board[endRow][endCol];
+                                        this.board[endRow][endCol] = piece;
+                                        this.board[startRow][startCol] = null;
+
+                                        const score = this.minimax(depth - 1, alpha, beta, false);
+
+                                        // Undo move
+                                        this.board[startRow][startCol] = piece;
+                                        this.board[endRow][endCol] = savedTarget;
+
+                                        maxScore = Math.max(maxScore, score);
+                                        alpha = Math.max(alpha, score);
+                                        if (beta <= alpha) break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    return maxScore;
+                } else {
+                    let minScore = Infinity;
+                    for (let startRow = 0; startRow < 8; startRow++) {
+                        for (let startCol = 0; startCol < 8; startCol++) {
+                            const piece = this.board[startRow][startCol];
+                            if (!piece || piece.color !== 'WHITE') continue;
+
+                            for (let endRow = 0; endRow < 8; endRow++) {
+                                for (let endCol = 0; endCol < 8; endCol++) {
+                                    if (this.isValidMove(startRow, startCol, endRow, endCol) &&
+                                        this.evaluateMove(startRow, startCol, endRow, endCol, 'WHITE')) {
+                                        
+                                        // Make move
+                                        const savedTarget = this.board[endRow][endCol];
+                                        this.board[endRow][endCol] = piece;
+                                        this.board[startRow][startCol] = null;
+
+                                        const score = this.minimax(depth - 1, alpha, beta, true);
+
+                                        // Undo move
+                                        this.board[startRow][startCol] = piece;
+                                        this.board[endRow][endCol] = savedTarget;
+
+                                        minScore = Math.min(minScore, score);
+                                        beta = Math.min(beta, score);
+                                        if (beta <= alpha) break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    return minScore;
+                }
+            }
+
             findBestMove() {
                 let bestScore = -Infinity;
                 let bestMove = null;
-
-                // Fix the for-loop conditions
+                const depth = 1; // Increase for stronger play, decrease for faster moves
+                
                 for (let startRow = 0; startRow < 8; startRow++) {
                     for (let startCol = 0; startCol < 8; startCol++) {    // Fix: add < 8
                         const piece = this.board[startRow][startCol];
@@ -720,15 +843,14 @@
                                 if (this.isValidMove(startRow, startCol, endRow, endCol) &&
                                     this.evaluateMove(startRow, startCol, endRow, endCol, 'BLACK')) {
                                     
-                                    // Try the move
+                                    // Make move
                                     const savedTarget = this.board[endRow][endCol];
                                     this.board[endRow][endCol] = piece;
                                     this.board[startRow][startCol] = null;
 
-                                    // Evaluate position after move
-                                    const score = this.evaluatePosition('BLACK');
+                                    const score = this.minimax(depth - 1, -Infinity, Infinity, false);
 
-                                    // Restore the board
+                                    // Undo move
                                     this.board[startRow][startCol] = piece;
                                     this.board[endRow][endCol] = savedTarget;
 
@@ -747,13 +869,26 @@
             makeAIMove() {
                 if (!this.isAIEnabled || this.currentPlayer !== 'BLACK' || this.gameOver) return;
                 
-                const move = this.findBestMove();
-                if (move) {
-                    setTimeout(() => {
-                        this.movePiece(move.startRow, move.startCol, move.endRow, move.endCol);
-                    }, 500); // Add slight delay for better UX
-                }
+                // Show spinner
+                const spinner = document.getElementById('ai-spinner');
+                spinner.style.display = 'inline-block';
+                
+                // Use requestAnimationFrame to ensure spinner starts
+                requestAnimationFrame(() => {
+                    const move = this.findBestMove();
+                    if (move) {
+                        setTimeout(() => {
+                            this.movePiece(move.startRow, move.startCol, move.endRow, move.endCol);
+                            this.renderBoard();
+                            // Hide spinner
+                            spinner.style.display = 'none';
+                        }, 500);
+                    } else {
+                        spinner.style.display = 'none';
+                    }
+                });
             }
+
         }
 
         const game = new Chess();
