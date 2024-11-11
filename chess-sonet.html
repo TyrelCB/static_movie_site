@@ -3,70 +3,155 @@
 <head>
     <meta charset="UTF-8">
     <title>Chess Game</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
     <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #476899;
+            font-family: 'Roboto', sans-serif;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .game-container {
+            display: flex;
+            gap: 30px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .game-left {
+            flex: 1;
+            max-width: 400px;
+        }
+
+        .game-right {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
         .board {
             width: 400px;
             height: 400px;
-            border: 2px solid #333;
+            border-radius: 4px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+            overflow: hidden;
+            background: #fff;
             display: grid;
             grid-template: repeat(8, 1fr) / repeat(8, 1fr);
         }
+
         .square {
             display: flex;
             justify-content: center;
             align-items: center;
-            font-size: 2em;
+            font-size: 2.2em;
             cursor: pointer;
+            transition: all 0.2s ease;
         }
-        .white { background: #fff; }
-        .black { background: #999; }
-        .selected { background: #7fff7f; }
-        .valid-move { 
-            position: relative;
-            background: inherit;
+
+        .square:hover {
+            transform: scale(1.05);
+            z-index: 1;
         }
+
+        .white { background: #f8f9fa; }
+        .black { background: #6c757d; }
+        
+        .selected { 
+            background: #28a745 !important;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.1);
+        }
+
         .valid-move::after {
             content: '';
             position: absolute;
-            width: 30%;
-            height: 30%;
-            background: #ffeb3b;
+            width: 25px;
+            height: 25px;
+            background: #ffd700;
             border-radius: 50%;
-            opacity: 0.7;
+            opacity: 0.6;
+            transition: all 0.2s ease;
         }
+
         .valid-capture::after {
             width: 100%;
             height: 100%;
-            border: 4px solid #ffeb3b;
+            border: 3px solid #ffd700;
             background: none;
             box-sizing: border-box;
         }
+
         .game-info {
-            margin: 20px;
-            font-family: Arial, sans-serif;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
+
+        #turn {
+            font-size: 1.5em;
+            font-weight: 500;
+            color: #343a40;
+            margin-bottom: 10px;
+        }
+
+        #status {
+            font-size: 1.2em;
+            color: #6c757d;
+            font-weight: 300;
+        }
+
         .game-log {
-            margin: 20px;
-            font-family: monospace;
-            max-height: 200px;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            max-height: 300px;
             overflow-y: auto;
-            border: 1px solid #ccc;
-            padding: 10px;
-            background: #f5f5f5;
         }
+
         .log-entry {
-            margin: 2px 0;
-            padding: 2px;
+            padding: 8px;
+            border-bottom: 1px solid #f0f2f5;
+            color: #495057;
+            font-size: 0.9em;
+        }
+
+        .log-entry:last-child {
+            border-bottom: none;
+        }
+
+        @media (max-width: 768px) {
+            .game-container {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .game-right {
+                width: 100%;
+                max-width: 400px;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="game-info">
-        <div id="turn">White's turn</div>
-        <div id="status"></div>
+    <div class="game-container">
+        <div class="game-left">
+            <div class="board" id="board"></div>
+        </div>
+        <div class="game-right">
+            <div class="game-info">
+                <div id="turn">White's turn</div>
+                <div id="status"></div>
+            </div>
+            <div class="game-log" id="game-log"></div>
+        </div>
     </div>
-    <div id="board" class="board"></div>
-    <div id="game-log" class="game-log"></div>
 
     <script>
         const PIECES = {
