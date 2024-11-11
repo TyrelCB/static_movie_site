@@ -262,10 +262,14 @@
                 const oppositeColor = color === 'WHITE' ? 'BLACK' : 'WHITE';
                 const check = this.isSquareUnderAttack(king.row, king.col, oppositeColor);
                 console.log('Checking if', color, 'king is in check', king, check);
-                return king && this.isSquareUnderAttack(king.row, king.col, oppositeColor);
+                return this.isSquareUnderAttack(king.row, king.col, oppositeColor);
             }
 
             hasLegalMoves(color) {
+                const king = this.findKing(color);
+                console.log('Checking legal moves for', color);
+                
+                // Rest of legal moves check
                 for (let startRow = 0; startRow < 8; startRow++) {
                     for (let startCol = 0; startCol < 8; startCol++) {
                         const piece = this.board[startRow][startCol];
@@ -278,8 +282,6 @@
                                     this.board[endRow][endCol] = piece;
                                     this.board[startRow][startCol] = null;
 
-                                    // Check if move is legal and doesn't leave king in check
-                                    const isValid = this.isValidMove(startRow, startCol, endRow, endCol);
                                     const movePutsInCheck = this.isInCheck(color);
 
                                     // Undo move
@@ -287,7 +289,8 @@
                                     this.board[endRow][endCol] = savedTarget;
                                     this.lastPawnDoubleMove = savedLastPawnMove;
 
-                                    if (isValid && !movePutsInCheck) {
+                                    if (!movePutsInCheck) {
+                                        console.log('Legal move found for', color, piece, startRow, startCol, endRow, endCol);
                                         return true;
                                     }
                                 }
@@ -295,13 +298,18 @@
                         }
                     }
                 }
+                console.log('No legal moves found for', color);
                 return false;
             }
 
             isCheckmate(color) {
+                const check = this.isInCheck(color);
+                const hasLegalMoves = this.hasLegalMoves(color);
+                console.log('Checking checkmate for', color, 'is in check:',  check, 'has moves:', hasLegalMoves);
                 const checkmate = this.isInCheck(color) && !this.hasLegalMoves(color);
                 console.log('Checking checkmate for', color, checkmate);
-                return this.isInCheck(color) && !this.hasLegalMoves(color);
+                const king = this.findKing(color);
+                return checkmate
             }
 
             movePiece(startRow, startCol, endRow, endCol) {
@@ -354,16 +362,23 @@
                     const rookCol = direction === 1 ? 7 : 0;
                     const newRookCol = direction === 1 ? endCol - 1 : endCol + 1;
                     
-                    // Move rook
-                    this.board[endRow][newRookCol] = this.board[startRow][rookCol];
+                    // Move rook - Create a copy of the rook to preserve its properties
+                    const rook = { ...this.board[startRow][rookCol] };
+                    this.board[endRow][newRookCol] = rook;
                     this.board[startRow][rookCol] = null;
                     this.board[endRow][newRookCol].hasMoved = true;
+
+                    // Move king separately
+                    this.board[endRow][endCol] = { ...piece, hasMoved: true };
+                    this.board[startRow][startCol] = null;
+                } else {
+                    // Regular move
+                    this.board[endRow][endCol] = { ...piece, hasMoved: true };
+                    this.board[startRow][startCol] = null;
                 }
 
-                // Regular move
-                this.board[endRow][endCol] = piece;
-                this.board[startRow][startCol] = null;
-                piece.hasMoved = true;
+                // Remove the redundant piece move after castling
+                // piece.hasMoved = true; // Remove this line as we're now handling it in the moves
 
                 // Pawn promotion
                 if (piece.type === 'PAWN' && (endRow === 0 || endRow === 7)) {
