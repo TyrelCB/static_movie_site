@@ -440,6 +440,7 @@
                 this.initializeControls(); // Add this line
                 this.moveCounter = 1; // Full moves (each player's turn = 1 move)
                 this.halfMoveCounter = 1; // Individual turns
+                this.positionHistory = new Map(); // Add position history tracking
             }
 
             initializeLogging() {
@@ -793,6 +794,10 @@
                 this.board[endRow][endCol] = { ...piece, hasMoved: true };
                 this.board[startRow][startCol] = null;
 
+                // After successful move, before calling afterMove:
+                const positionKey = this.generatePositionKey();
+                this.positionHistory.set(positionKey, (this.positionHistory.get(positionKey) || 0) + 1);
+
                 this.afterMove(piece);
                 return true;
             }
@@ -825,11 +830,21 @@
                 const inCheck = this.isInCheck(this.currentPlayer);
                 const hasLegalMoves = this.hasLegalMoves(this.currentPlayer);
                 const insufficientMaterial = this.hasInsufficientMaterial();
+                const repeatingPosition = this.hasRepeatingPosition();
                 
                 // Update game status
                 const status = document.getElementById('status');
                 
-                if (insufficientMaterial) {
+                if (repeatingPosition) {
+                    status.textContent = 'Draw by threefold repetition!';
+                    this.log('Game drawn due to threefold repetition');
+                    this.gameOver = true;
+                    
+                    const modal = document.getElementById('checkmateModal');
+                    const modalMessage = document.getElementById('modalMessage');
+                    modalMessage.textContent = 'Game is a draw by threefold repetition!';
+                    modal.classList.add('show');
+                } else if (insufficientMaterial) {
                     status.textContent = 'Draw by insufficient material!';
                     this.log('Game drawn due to insufficient material');
                     this.gameOver = true;
@@ -1230,6 +1245,43 @@
 
                 // Check if both players have insufficient material
                 return hasPieces(whitePieces) && hasPieces(blackPieces);
+            }
+
+            // Add new method to generate position key
+            generatePositionKey() {
+                let key = '';
+                // Add board position
+                for (let row = 0; row < 8; row++) {
+                    for (let col = 0; col < 8; col++) {
+                        const piece = this.board[row][col];
+                        if (piece) {
+                            key += `${piece.type}${piece.color}${row}${col}`;
+                        }
+                    }
+                }
+                // Add current player
+                key += this.currentPlayer;
+                // Add castling rights
+                for (let row of [0, 7]) {
+                    for (let col of [0, 4, 7]) {
+                        const piece = this.board[row][col];
+                        if (piece && !piece.hasMoved) {
+                            key += `${row}${col}`;
+                        }
+                    }
+                }
+                // Add en passant possibility
+                if (this.lastPawnDoubleMove) {
+                    key += `ep${this.lastPawnDoubleMove.row}${this.lastPawnDoubleMove.col}`;
+                }
+                return key;
+            }
+
+            // Add method to check for repetition
+            hasRepeatingPosition() {
+                const currentKey = this.generatePositionKey();
+                const count = this.positionHistory.get(currentKey) || 0;
+                return count >= 3; // Threefold repetition
             }
 
         }
