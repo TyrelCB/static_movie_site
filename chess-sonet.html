@@ -824,11 +824,22 @@
                 // Check game state
                 const inCheck = this.isInCheck(this.currentPlayer);
                 const hasLegalMoves = this.hasLegalMoves(this.currentPlayer);
+                const insufficientMaterial = this.hasInsufficientMaterial();
                 
                 // Update game status
                 const status = document.getElementById('status');
                 
-                if (inCheck && !hasLegalMoves) {
+                if (insufficientMaterial) {
+                    status.textContent = 'Draw by insufficient material!';
+                    this.log('Game drawn due to insufficient material');
+                    this.gameOver = true;
+                    
+                    // Show insufficient material modal
+                    const modal = document.getElementById('checkmateModal');
+                    const modalMessage = document.getElementById('modalMessage');
+                    modalMessage.textContent = 'Game is a draw by insufficient material!';
+                    modal.classList.add('show');
+                } else if (inCheck && !hasLegalMoves) {
                     // Checkmate
                     status.textContent = `Checkmate! ${piece.color} wins!`;
                     this.log(`Checkmate! ${piece.color} wins!`);
@@ -1177,6 +1188,48 @@
                     this.searchDepth = parseInt(e.target.value);
                     depthValue.textContent = this.searchDepth;
                 });
+            }
+
+            hasInsufficientMaterial() {
+                // Count pieces for each player
+                let whitePieces = new Map();
+                let blackPieces = new Map();
+
+                for (let row = 0; row < 8; row++) {
+                    for (let col = 0; col < 8; col++) {
+                        const piece = this.board[row][col];
+                        if (!piece) continue;
+
+                        const piecesList = piece.color === 'WHITE' ? whitePieces : blackPieces;
+                        piecesList.set(piece.type, (piecesList.get(piece.type) || 0) + 1);
+                    }
+                }
+
+                // Helper function to check piece counts
+                const hasPieces = (pieces) => {
+                    const count = (type) => pieces.get(type) || 0;
+                    
+                    // If there are pawns, rooks, or queens, there's sufficient material
+                    if (count('PAWN') > 0 || count('ROOK') > 0 || count('QUEEN') > 0) {
+                        return false;
+                    }
+
+                    // King only
+                    if (pieces.size === 1 && count('KING') === 1) {
+                        return true;
+                    }
+
+                    // King and single knight/bishop
+                    if (pieces.size === 2 && count('KING') === 1 && 
+                        (count('KNIGHT') === 1 || count('BISHOP') === 1)) {
+                        return true;
+                    }
+
+                    return false;
+                };
+
+                // Check if both players have insufficient material
+                return hasPieces(whitePieces) && hasPieces(blackPieces);
             }
 
         }
