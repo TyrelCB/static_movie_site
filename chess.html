@@ -190,6 +190,18 @@
             border-bottom: 1px solid #2a2a4e;
             color: #00ffff;
             font-size: 0.9em;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .move-number {
+            color: #ff00ff;
+            margin-right: 10px;
+        }
+
+        .move-text {
+            font-family: monospace;
         }
 
         .log-entry:last-child {
@@ -441,18 +453,37 @@
                 this.moveCounter = 1; // Full moves (each player's turn = 1 move)
                 this.halfMoveCounter = 1; // Individual turns
                 this.positionHistory = new Map(); // Add position history tracking
+                this.moveNotation = [];
             }
 
             initializeLogging() {
                 this.log('Game started');
             }
 
-            log(message) {
+            log(message, moveNotation = null) {
                 const logEntry = document.createElement('div');
                 logEntry.className = 'log-entry';
-                const timestamp = new Date().toLocaleTimeString();
-                logEntry.textContent = `[${timestamp}] ${message}`;
-                
+
+                if (moveNotation) {
+                    const moveNumber = Math.ceil(this.halfMoveCounter / 2);
+                    const isWhiteMove = this.halfMoveCounter % 2 === 1;
+
+                    const moveNumberSpan = document.createElement('span');
+                    moveNumberSpan.className = 'move-number';
+                    moveNumberSpan.textContent = `${moveNumber}.${isWhiteMove ? '' : '..'}`;
+
+                    const moveTextSpan = document.createElement('span');
+                    moveTextSpan.className = 'move-text';
+                    moveTextSpan.textContent = moveNotation;
+
+                    logEntry.appendChild(moveNumberSpan);
+                    logEntry.appendChild(moveTextSpan);
+
+                    this.moveNotation.push(moveNotation);
+                } else {
+                    logEntry.textContent = message;
+                }
+
                 const gameLog = document.getElementById('game-log');
                 gameLog.appendChild(logEntry);
                 gameLog.scrollTop = gameLog.scrollHeight;
@@ -790,6 +821,11 @@
                     this.board[startRow][rookCol] = null;
                 }
 
+                const isCapture = this.board[endRow][endCol] !== null;
+            
+                // Generate notation before making the move
+                const moveNotation = this.generateMoveNotation(startRow, startCol, endRow, endCol, isCapture);
+
                 // Make the actual move
                 this.board[endRow][endCol] = { ...piece, hasMoved: true };
                 this.board[startRow][startCol] = null;
@@ -797,6 +833,21 @@
                 // After successful move, before calling afterMove:
                 const positionKey = this.generatePositionKey();
                 this.positionHistory.set(positionKey, (this.positionHistory.get(positionKey) || 0) + 1);
+
+                // After the move is made, check for check/checkmate
+                const inCheck = this.isInCheck(this.currentPlayer);
+                const hasLegalMoves = this.hasLegalMoves(this.currentPlayer);
+
+                // Add check/checkmate symbols to notation
+                let finalNotation = moveNotation;
+                if (inCheck && !hasLegalMoves) {
+                    finalNotation += '#';
+                } else if (inCheck) {
+                    finalNotation += '+';
+                }
+
+                // Log the move with notation
+                this.log(null, finalNotation);
 
                 this.afterMove(piece);
                 return true;
@@ -1282,6 +1333,76 @@
                 const currentKey = this.generatePositionKey();
                 const count = this.positionHistory.get(currentKey) || 0;
                 return count >= 3; // Threefold repetition
+            }
+
+            getSquareNotation(row, col) {
+                const files = 'abcdefgh';
+                const ranks = '87654321';
+                return files[col] + ranks[row];
+            }
+
+            getPieceNotation(piece) {
+                const notation = {
+                    'KING': 'K', 'QUEEN': 'Q', 'ROOK': 'R',
+                    'BISHOP': 'B', 'KNIGHT': 'N'
+                };
+                return notation[piece.type] || '';
+            }
+
+            generateMoveNotation(startRow, startCol, endRow, endCol, capture = false) {
+                const piece = this.board[startRow][startCol];
+                let notation = '';
+
+                // Handle castling
+                if (piece.type === 'KING' && Math.abs(startCol - endCol) === 2) {
+                    return endCol > startCol ? 'O-O' : 'O-O-O';
+                }
+
+                // Add piece letter (except for pawns)
+                notation += this.getPieceNotation(piece);
+
+                // Disambiguate moves if necessary
+                const needsDisambiguation = this.needsDisambiguation(piece, startRow, startCol, endRow, endCol);
+                if (needsDisambiguation.file) notation += this.getSquareNotation(startRow, startCol)[0];
+                if (needsDisambiguation.rank) notation += this.getSquareNotation(startRow, startCol)[1];
+
+                // Add capture symbol
+                if (capture) {
+                    if (piece.type === 'PAWN') notation += this.getSquareNotation(startRow, startCol)[0];
+                    notation += 'x';
+                }
+
+                // Add destination square
+                notation += this.getSquareNotation(endRow, endCol);
+
+                // Handle pawn promotion
+                if (piece.type === 'PAWN' && (endRow === 0 || endRow === 7)) {
+                    notation += '=Q';
+                }
+
+                return notation;
+            }
+
+            needsDisambiguation(piece, startRow, startCol, endRow, endCol) {
+                let needFile = false;
+                let needRank = false;
+
+                // Check other pieces of same type that could move to the same square
+                for (let row = 0; row < 8; row++) {
+                    for (let col = 0; col < 8; col++) {
+                        if (row === startRow && col === startCol) continue;
+
+                        const otherPiece = this.board[row][col];
+                        if (!otherPiece || otherPiece.type !== piece.type || otherPiece.color !== piece.color) continue;
+
+                        if (this.isValidMove(row, col, endRow, endCol)) {
+                            if (col !== startCol) needFile = true;
+                            if (row !== startRow) needRank = true;
+                        }
+                    }
+                }
+
+                return { file: needFile, rank: needRank };
             }
 
         }
