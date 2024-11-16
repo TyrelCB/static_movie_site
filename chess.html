@@ -1220,15 +1220,15 @@
                     'KING': 20000
                 };
 
-                // Positional bonuses for pieces
+                // Positional bonuses for pieces - now from black's perspective
                 const pawnPositionBonus = [
                     [0,  0,  0,  0,  0,  0,  0,  0],
-                    [50, 50, 50, 50, 50, 50, 50, 50],
-                    [10, 10, 20, 30, 30, 20, 10, 10],
-                    [5,  5, 10, 25, 25, 10,  5,  5],
-                    [0,  0,  0, 20, 20,  0,  0,  0],
-                    [5, -5,-10,  0,  0,-10, -5,  5],
                     [5, 10, 10,-20,-20, 10, 10,  5],
+                    [5, -5,-10,  0,  0,-10, -5,  5],
+                    [0,  0,  0, 20, 20,  0,  0,  0],
+                    [5,  5, 10, 25, 25, 10,  5,  5],
+                    [10, 10, 20, 30, 30, 20, 10, 10],
+                    [50, 50, 50, 50, 50, 50, 50, 50],
                     [0,  0,  0,  0,  0,  0,  0,  0]
                 ];
 
@@ -1240,9 +1240,11 @@
                             // Material value
                             let value = pieceValues[piece.type];
                             
-                            // Position value
+                            // Position value for pawns
                             if (piece.type === 'PAWN') {
-                                const positionRow = piece.color === 'WHITE' ? row : 7 - row;
+                                // For black pawns, read the bonus array as is
+                                // For white pawns, flip the array vertically
+                                const positionRow = piece.color === 'BLACK' ? row : 7 - row;
                                 value += pawnPositionBonus[positionRow][col];
                             }
 
