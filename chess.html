@@ -384,6 +384,19 @@
             box-shadow: 0 0 15px #ff00ff;
             transform: scale(1.05);
         }
+
+        /* Add new CSS for dangerous moves */
+        .valid-move.dangerous::after {
+            border: 2px solid #ff0000;
+            background: #ff000040;
+            box-shadow: 0 0 10px #ff0000;
+        }
+
+        .valid-capture.dangerous::after {
+            border: 2px solid #ff0000;
+            background: #ff000040;
+            box-shadow: 0 0 10px #ff0000;
+        }
     </style>
 </head>
 <body>
@@ -680,12 +693,14 @@
                 return kingPosition;
             }
 
-            isSquareUnderAttack(row, col, byColor) {
+            isSquareUnderAttack(row, col, byColor, excludeKing = false) {
                 for (let startRow = 0; startRow < 8; startRow++) {
                     for (let startCol = 0; startCol < 8; startCol++) {
                         const piece = this.board[startRow][startCol];
                         if (piece && piece.color === byColor) {
-                            // Temporarily set attacking color as current player to check move validity
+                            // Skip king when checking for dangerous moves to avoid recursion
+                            if (excludeKing && piece.type === 'KING') continue;
+                            
                             const savedPlayer = this.currentPlayer;
                             this.currentPlayer = byColor;
                             const isValid = this.isValidMove(startRow, startCol, row, col);
@@ -989,6 +1004,9 @@
                 const validMoves = this.selectedPiece ? 
                     this.getValidMovesForPiece(this.selectedPiece.row, this.selectedPiece.col) : [];
 
+                // Get opposing color for danger check
+                const oppositeColor = this.currentPlayer === 'WHITE' ? 'BLACK' : 'WHITE';
+
                 for (let row = 0; row < 8; row++) {
                     for (let col = 0; col < 8; col++) {
                         const square = document.createElement('div');
@@ -1003,6 +1021,28 @@
                             // Add special highlighting for captures
                             if (piece && piece.color !== this.currentPlayer) {
                                 square.classList.add('valid-capture');
+                            }
+
+                            // Check if the move would put the piece in danger
+                            if (this.selectedPiece) {
+                                // Simulate the move
+                                const selectedPiece = this.board[this.selectedPiece.row][this.selectedPiece.col];
+                                const savedTarget = this.board[row][col];
+                                
+                                // Make temporary move
+                                this.board[row][col] = selectedPiece;
+                                this.board[this.selectedPiece.row][this.selectedPiece.col] = null;
+                                
+                                // Check if the destination square would be under attack
+                                const isDangerous = this.isSquareUnderAttack(row, col, oppositeColor, true);
+                                
+                                // Restore the board
+                                this.board[this.selectedPiece.row][this.selectedPiece.col] = selectedPiece;
+                                this.board[row][col] = savedTarget;
+                                
+                                if (isDangerous) {
+                                    square.classList.add('dangerous');
+                                }
                             }
                         }
 
