@@ -1619,7 +1619,8 @@
                     currentPlayer: this.currentPlayer,
                     lastPawnDoubleMove: this.lastPawnDoubleMove ? {...this.lastPawnDoubleMove} : null,
                     halfMoveCounter: this.halfMoveCounter,
-                    moveCounter: this.moveCounter
+                    moveCounter: this.moveCounter,
+                    selectedPiece: this.selectedPiece ? {...this.selectedPiece} : null  // Add this line
                 };
                 this.moveStack.push(state);
                 document.getElementById('revertButton').disabled = false;
@@ -1634,6 +1635,10 @@
                 this.lastPawnDoubleMove = prevState.lastPawnDoubleMove;
                 this.halfMoveCounter = prevState.halfMoveCounter;
                 this.moveCounter = prevState.moveCounter;
+                this.selectedPiece = prevState.selectedPiece;
+                
+                // Recompute valid moves after reverting
+                this.computeAllValidMoves();
                 
                 // Update UI
                 this.renderBoard();
