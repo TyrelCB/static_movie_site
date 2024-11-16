@@ -144,6 +144,15 @@
             border: 1px solid #00ffff;
         }
 
+        .ai-score {
+            margin-top: 10px;
+            padding: 5px 0;
+            color: #00ffff;
+            font-family: monospace;
+            font-size: 0.9em;
+            border-top: 1px solid #2a2a4e;
+        }
+
         #turn {
             display: flex;
             justify-content: space-between;
@@ -493,6 +502,7 @@
                     <span class="move-counter">Move: 1</span>
                 </div>
                 <div id="status"></div>
+                <div id="ai-score" class="ai-score">AI Score: 0</div>
             </div>
             <div class="game-log" id="game-log"></div>
         </div>
@@ -1307,12 +1317,13 @@
 
             findBestMove() {
                 let bestScore = -Infinity;
-                let bestMove = null;
-                const depth = this.searchDepth; // Use configurable depth
+                let validMoves = [];
+                const depth = this.searchDepth;
                 
                 const savedPlayer = this.currentPlayer;
                 this.currentPlayer = 'BLACK';
 
+                // First pass: collect all valid moves and their scores
                 for (let startRow = 0; startRow < 8; startRow++) {
                     for (let startCol = 0; startCol < 8; startCol++) {
                         const piece = this.board[startRow][startCol];
@@ -1332,9 +1343,17 @@
                                     this.board[startRow][startCol] = piece;
                                     this.board[endRow][endCol] = savedTarget;
 
+                                    // Store all valid moves with their scores
+                                    validMoves.push({
+                                        startRow,
+                                        startCol,
+                                        endRow,
+                                        endCol,
+                                        score
+                                    });
+
                                     if (score > bestScore) {
                                         bestScore = score;
-                                        bestMove = { startRow, startCol, endRow, endCol };
                                     }
                                 }
                             }
@@ -1343,7 +1362,20 @@
                 }
 
                 this.currentPlayer = savedPlayer;
-                return bestMove;
+
+                // If no valid moves were found, return null
+                if (validMoves.length === 0) {
+                    return null;
+                }
+
+                // Find all moves that have the best score
+                const bestMoves = validMoves.filter(move => move.score === bestScore);
+                
+                // Randomly select one of the best moves
+                const selectedMove = bestMoves[Math.floor(Math.random() * bestMoves.length)];
+                
+                // If all moves are equally bad, just pick a random valid move
+                return selectedMove || validMoves[Math.floor(Math.random() * validMoves.length)];
             }
 
             makeAIMove() {
@@ -1357,6 +1389,10 @@
                 setTimeout(() => {
                     const move = this.findBestMove();
                     if (move) {
+                        // Update the AI score display
+                        const aiScoreElement = document.getElementById('ai-score');
+                        aiScoreElement.textContent = `AI Score: ${move.score}`;
+                        
                         this.movePiece(move.startRow, move.startCol, move.endRow, move.endCol);
                         this.renderBoard();
                     }
