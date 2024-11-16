@@ -423,6 +423,49 @@
             position: relative;
             /* ...existing modal-content styles... */
         }
+
+        .valid-move.checkmate::after {
+            border: 2px solid #00ff00;
+            background: #00ff0040;
+            box-shadow: 0 0 10px #00ff00;
+        }
+
+        .valid-capture.checkmate::after {
+            border: 2px solid #00ff00;
+            background: #00ff0040;
+            box-shadow: 0 0 10px #00ff00;
+        }
+
+        .control-buttons {
+            margin-top: 10px;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .control-button {
+            background: #1a1a2e;
+            color: #00ffff;
+            border: 1px solid #00ffff;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: all 0.2s ease;
+        }
+
+        .control-button:hover {
+            background: #2a2a4e;
+            box-shadow: 0 0 10px #00ffff;
+            transform: scale(1.05);
+        }
+
+        .control-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
     </style>
 </head>
 <body>
@@ -434,6 +477,9 @@
                     <span id="depth-value">3</span>
                 </div>
                 <input type="range" min="1" max="5" value="3" class="difficulty-slider" id="depth-slider">
+                <div class="control-buttons">
+                    <button id="revertButton" class="control-button" disabled>Revert Move</button>
+                </div>
             </div>
             <div class="board" id="board"></div>
         </div>
@@ -494,6 +540,7 @@
                 this.halfMoveCounter = 1; // Individual turns
                 this.positionHistory = new Map(); // Add position history tracking
                 this.moveNotation = [];
+                this.moveStack = []; // Add this line to store move history
             }
 
             initializeLogging() {
@@ -783,6 +830,9 @@
             }
 
             movePiece(startRow, startCol, endRow, endCol) {
+                // Save state before making the move
+                this.saveMoveState();
+
                 const piece = this.board[startRow][startCol];
                 
                 if (!this.isValidMove(startRow, startCol, endRow, endCol)) {
@@ -1050,20 +1100,21 @@
                                 square.classList.add('valid-capture');
                             }
 
-                            // Check if the move would put the piece in danger
                             if (this.selectedPiece) {
-                                // Simulate the move
+                                // Check for checkmate moves
+                                if (this.isCheckmateAfterMove(this.selectedPiece.row, this.selectedPiece.col, row, col)) {
+                                    square.classList.add('checkmate');
+                                }
+
+                                // Check for dangerous moves (existing code)
                                 const selectedPiece = this.board[this.selectedPiece.row][this.selectedPiece.col];
                                 const savedTarget = this.board[row][col];
                                 
-                                // Make temporary move
                                 this.board[row][col] = selectedPiece;
                                 this.board[this.selectedPiece.row][this.selectedPiece.col] = null;
                                 
-                                // Check if the destination square would be under attack
                                 const isDangerous = this.isSquareUnderAttack(row, col, oppositeColor, true);
                                 
-                                // Restore the board
                                 this.board[this.selectedPiece.row][this.selectedPiece.col] = selectedPiece;
                                 this.board[row][col] = savedTarget;
                                 
@@ -1321,6 +1372,14 @@
                     this.searchDepth = parseInt(e.target.value);
                     depthValue.textContent = this.searchDepth;
                 });
+
+                // Add revert button listener
+                document.getElementById('revertButton').addEventListener('click', () => {
+                    if (this.revertMove() && this.currentPlayer === 'BLACK') {
+                        // If we reverted to black's turn, revert one more time
+                        this.revertMove();
+                    }
+                });
             }
 
             hasInsufficientMaterial() {
@@ -1472,6 +1531,94 @@
                 return { file: needFile, rank: needRank };
             }
 
+            isCheckmateAfterMove(startRow, startCol, endRow, endCol) {
+                // Save current state
+                const piece = this.board[startRow][startCol];
+                const targetPiece = this.board[endRow][endCol];
+                const savedPlayer = this.currentPlayer;
+                
+                // Make temporary move
+                this.board[endRow][endCol] = piece;
+                this.board[startRow][startCol] = null;
+                
+                // Switch to opponent's perspective
+                this.currentPlayer = this.currentPlayer === 'WHITE' ? 'BLACK' : 'WHITE';
+                
+                // Check if opponent is in check and has no legal moves
+                const inCheck = this.isInCheck(this.currentPlayer);
+                const hasLegalMoves = this.computeHasLegalMoves(this.currentPlayer);
+                
+                // Restore board state
+                this.board[startRow][startCol] = piece;
+                this.board[endRow][endCol] = targetPiece;
+                this.currentPlayer = savedPlayer;
+                
+                return inCheck && !hasLegalMoves;
+            }
+
+            computeHasLegalMoves(color) {
+                for (let startRow = 0; startRow < 8; startRow++) {
+                    for (let startCol = 0; startCol < 8;startCol++) {
+                        const piece = this.board[startRow][startCol];
+                        if (!piece || piece.color !== color) continue;
+
+                        for (let endRow = 0; endRow < 8; endRow++) {
+                            for (let endCol = 0; endCol < 8; endCol++) {
+                                if (this.isValidMove(startRow, startCol, endRow, endCol) &&
+                                    this.evaluateMove(startRow, startCol, endRow, endCol, color)) {
+                                    return true;
+                                }
+                            }
+                        }
+                    }
+                }
+                return false;
+            }
+
+            saveMoveState() {
+                const state = {
+                    board: this.board.map(row => row.map(piece => piece ? {...piece} : null)),
+                    currentPlayer: this.currentPlayer,
+                    lastPawnDoubleMove: this.lastPawnDoubleMove ? {...this.lastPawnDoubleMove} : null,
+                    halfMoveCounter: this.halfMoveCounter,
+                    moveCounter: this.moveCounter
+                };
+                this.moveStack.push(state);
+                document.getElementById('revertButton').disabled = false;
+            }
+
+            revertMove() {
+                if (this.moveStack.length === 0) return false;
+                
+                const prevState = this.moveStack.pop();
+                this.board = prevState.board;
+                this.currentPlayer = prevState.currentPlayer;
+                this.lastPawnDoubleMove = prevState.lastPawnDoubleMove;
+                this.halfMoveCounter = prevState.halfMoveCounter;
+                this.moveCounter = prevState.moveCounter;
+                
+                // Update UI
+                this.renderBoard();
+                document.getElementById('revertButton').disabled = this.moveStack.length === 0;
+                
+                // Update turn display
+                const turnElement = document.getElementById('turn');
+                turnElement.innerHTML = `
+                    <div class="turn-info">
+                        <span>${this.currentPlayer}'s turn</span>
+                        <div id="ai-spinner" class="spinner"></div>
+                    </div>
+                    <span class="move-counter">Move: ${this.moveCounter} (${this.halfMoveCounter})</span>
+                `;
+
+                // Remove last move from game log
+                const gameLog = document.getElementById('game-log');
+                if (gameLog.lastChild) {
+                    gameLog.removeChild(gameLog.lastChild);
+                }
+
+                return true;
+            }
         }
 
         const game = new Chess();
