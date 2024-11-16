@@ -420,7 +420,7 @@
             transition: all 0.2s ease;
             padding: 5px;
             line-height: 0.8;
-            border-radius: 50%;
+            border-radius: 20%;
         }
 
         .modal-close:hover {
@@ -475,6 +475,11 @@
             transform: none;
             box-shadow: none;
         }
+
+        .endangered {
+            box-shadow: inset 0 0 30px #ff0000;
+            background: rgba(255, 140, 0, 0.2) !important;
+        }
     </style>
 </head>
 <body>
@@ -485,7 +490,7 @@
                     <span>AI Difficulty:</span>
                     <span id="depth-value">3</span>
                 </div>
-                <input type="range" min="1" max="5" value="3" class="difficulty-slider" id="depth-slider">
+                <input type="range" min="1" max="4" value="3" class="difficulty-slider" id="depth-slider">
                 <div class="control-buttons">
                     <button id="revertButton" class="control-button" disabled>Revert Move</button>
                 </div>
@@ -1101,6 +1106,12 @@
                         square.className = `square ${(row + col) % 2 ? 'black' : 'white'}`;
                         
                         const piece = this.board[row][col];
+
+                        // Highlight endangered pieces when no piece is selected
+                        if (!this.selectedPiece && piece && piece.color === this.currentPlayer && 
+                            this.isPieceInDanger(row, col)) {
+                            square.classList.add('endangered');
+                        }
                         
                         // Highlight valid moves
                         const isValidMove = validMoves.some(move => move.row === row && move.col === col);
@@ -1660,7 +1671,18 @@
                     gameLog.removeChild(gameLog.lastChild);
                 }
 
+                // Reset gameOver if it was true
+                this.gameOver = false;
+
                 return true;
+            }
+
+            isPieceInDanger(row, col) {
+                const piece = this.board[row][col];
+                if (!piece) return false;
+
+                const oppositeColor = piece.color === 'WHITE' ? 'BLACK' : 'WHITE';
+                return this.isSquareUnderAttack(row, col, oppositeColor);
             }
         }
 
