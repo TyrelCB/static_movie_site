@@ -551,6 +551,7 @@
                 this.positionHistory = new Map(); // Add position history tracking
                 this.moveNotation = [];
                 this.moveStack = []; // Add this line to store move history
+                this.previousAIScore = 0;  // Add this line
             }
 
             initializeLogging() {
@@ -1383,17 +1384,16 @@
             makeAIMove() {
                 if (!this.isAIEnabled || this.currentPlayer !== 'BLACK' || this.gameOver) return;
                 
-                // Show spinner
                 const spinner = document.getElementById('ai-spinner');
                 spinner.style.display = 'inline-block';
                 
-                // Use setTimeout to ensure board renders before heavy calculation
                 setTimeout(() => {
                     const move = this.findBestMove();
                     if (move) {
-                        // Update the AI score display
+                        // Update the AI score display with both current and previous scores
                         const aiScoreElement = document.getElementById('ai-score');
-                        aiScoreElement.textContent = `AI Score: ${move.score}`;
+                        aiScoreElement.textContent = `AI Score: ${move.score} (prev: ${this.previousAIScore})`;
+                        this.previousAIScore = move.score;
                         
                         this.movePiece(move.startRow, move.startCol, move.endRow, move.endCol);
                         this.renderBoard();
