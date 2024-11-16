@@ -343,6 +343,7 @@
             border: 2px solid #00ffff;
             box-shadow: 0 0 30px #00ffff80;
             animation: modalAppear 0.3s ease-out;
+            position: relative;
         }
 
         @keyframes modalAppear {
@@ -397,6 +398,31 @@
             background: #ff000040;
             box-shadow: 0 0 10px #ff0000;
         }
+
+        .modal-close {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: none;
+            border: none;
+            color: #00ffff;
+            font-size: 1.5em;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            padding: 5px;
+            line-height: 0.8;
+            border-radius: 50%;
+        }
+
+        .modal-close:hover {
+            color: #ff00ff;
+            transform: scale(1.1);
+        }
+
+        .modal-content {
+            position: relative;
+            /* ...existing modal-content styles... */
+        }
     </style>
 </head>
 <body>
@@ -428,6 +454,7 @@
 
     <div id="checkmateModal" class="modal">
         <div class="modal-content">
+            <button class="modal-close" onclick="document.getElementById('checkmateModal').classList.remove('show')">×</button>
             <h2>Game Over!</h2>
             <p id="modalMessage"></p>
             <button class="modal-button" onclick="location.reload()">Play Again</button>
