@@ -25,6 +25,7 @@
             padding: 10px;
             gap: 20px;
             width: 100%;
+            position: relative;  /* Add this */
         }
 
         .game-left {
@@ -503,6 +504,7 @@
         .endangered {
             box-shadow: inset 0 0 30px #ff0000;
             background: rgba(255, 140, 0, 0.2) !important;
+            border-radius: 50%;
         }
 
         /* Add new styles */
@@ -524,17 +526,16 @@
 
         /* Add new settings styles */
         .settings-button {
-            position: fixed;
-            top: 20px;
-            right: 20px;
+            position: relative;  /* Changed from absolute */
+            margin-bottom: 10px;  /* Added margin */
             background: #1a1a2e;
             color: #00ffff;
             border: 1px solid #00ffff;
             padding: 10px 20px;
             border-radius: 4px;
             cursor: pointer;
-            z-index: 100;
             transition: all 0.2s ease;
+            align-self: flex-end;  /* Added to align right */
         }
 
         .settings-button:hover {
@@ -683,10 +684,9 @@
             </div>
             <div class="game-log" id="game-log"></div>
         </div>
+        <div class="settings-button" onclick="game.toggleSettings()">⚙️ Settings</div>
     </div>
 
-    <button class="settings-button" onclick="game.toggleSettings()">⚙️ Settings</button>
-    
     <div class="settings-overlay" id="settingsOverlay">
         <div class="settings-panel">
             <div class="settings-header">
@@ -1345,10 +1345,7 @@
                             }
 
                             if (this.selectedPiece) {
-                                // Check for checkmate moves
-                                if (this.isCheckmateAfterMove(this.selectedPiece.row, this.selectedPiece.col, row, col)) {
-                                    square.classList.add('checkmate');
-                                }
+
 
                                 // Check for dangerous moves (existing code)
                                 const selectedPiece = this.board[this.selectedPiece.row][this.selectedPiece.col];
@@ -1364,6 +1361,10 @@
                                 
                                 if (isDangerous) {
                                     square.classList.add('dangerous');
+                                }
+                                // Check for checkmate moves
+                                if (this.isCheckmateAfterMove(this.selectedPiece.row, this.selectedPiece.col, row, col)) {
+                                    square.classList.add('checkmate');
                                 }
                             }
                         }
@@ -2031,6 +2032,9 @@
                 // Update existing elements
                 this.updateStyles();
                 this.renderBoard();
+
+                // Close settings after applying
+                this.toggleSettings();
             }
 
             updateStyles() {
