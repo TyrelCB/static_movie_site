@@ -607,7 +607,7 @@
 
                     const moveNumberSpan = document.createElement('span');
                     moveNumberSpan.className = 'move-number';
-                    moveNumberSpan.textContent = `${moveNumber}.${isWhiteMove ? '' : '..'}`;
+                    moveNumberSpan.textContent = `${moveNumber}.${isWhiteMove ? ' White' : '.. Black'}`;
 
                     const moveTextSpan = document.createElement('span');
                     moveTextSpan.className = 'move-text';
@@ -1275,7 +1275,7 @@
                     [5,  5, 10, 25, 25, 10,  5,  5],
                     [10, 10, 20, 30, 30, 20, 10, 10],
                     [50, 50, 50, 50, 50, 50, 50, 50],
-                    [0,  0,  0,  0,  0,  0,  0,  0]
+                    [50, 50, 50, 50, 50, 50, 50, 50]
                 ];
 
                 let score = 0;
