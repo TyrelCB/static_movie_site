@@ -510,6 +510,12 @@
             pointer-events: none;
             z-index: 2;
         }
+
+        .button-container {
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+        }
     </style>
 </head>
 <body>
@@ -521,13 +527,13 @@
                     <span id="depth-value">3</span>
                 </div>
                 <input type="range" min="1" max="4" value="3" class="difficulty-slider" id="depth-slider">
-                <div class="control-buttons">
-                    <button id="revertButton" class="control-button" disabled>Revert Move</button>
-                </div>
             </div>
             <div class="board-container">
                 <canvas class="move-canvas" id="moveCanvas"></canvas>
                 <div class="board" id="board"></div>
+            </div>
+            <div class="button-container">
+                <button id="revertButton" class="control-button" disabled>Revert Move</button>
             </div>
         </div>
         <div class="game-right">
