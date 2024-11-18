@@ -520,6 +520,113 @@
             display: flex;
             justify-content: center;
         }
+
+        /* Add new settings styles */
+        .settings-button {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #1a1a2e;
+            color: #00ffff;
+            border: 1px solid #00ffff;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            z-index: 100;
+            transition: all 0.2s ease;
+        }
+
+        .settings-button:hover {
+            background: #2a2a4e;
+            box-shadow: 0 0 10px #00ffff;
+        }
+
+        .settings-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .settings-panel {
+            background: #1a1a2e;
+            padding: 30px;
+            border-radius: 12px;
+            border: 2px solid #00ffff;
+            box-shadow: 0 0 30px #00ffff80;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .settings-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .settings-header h2 {
+            color: #00ffff;
+            margin: 0;
+        }
+
+        .settings-close {
+            background: none;
+            border: none;
+            color: #00ffff;
+            font-size: 1.5em;
+            cursor: pointer;
+        }
+
+        .color-setting {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            gap: 10px;
+        }
+
+        .color-setting label {
+            color: #00ffff;
+            flex: 1;
+        }
+
+        .color-setting input {
+            width: 60px;
+            height: 30px;
+            padding: 0;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .settings-actions {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .settings-button-action {
+            background: #00ffff;
+            color: #1a1a2e;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .settings-button-action:hover {
+            background: #ff00ff;
+            box-shadow: 0 0 10px #ff00ff;
+        }
     </style>
 </head>
 <body>
@@ -553,6 +660,45 @@
                 <div id="ai-score" class="ai-score">AI Score: 0</div>
             </div>
             <div class="game-log" id="game-log"></div>
+        </div>
+    </div>
+
+    <button class="settings-button" onclick="game.toggleSettings()">⚙️ Settings</button>
+    
+    <div class="settings-overlay" id="settingsOverlay">
+        <div class="settings-panel">
+            <div class="settings-header">
+                <h2>Game Settings</h2>
+                <button class="settings-close" onclick="game.toggleSettings()">×</button>
+            </div>
+            <div class="color-setting">
+                <label>Primary Glow Color:</label>
+                <input type="color" id="primaryColor" value="#00ffff">
+            </div>
+            <div class="color-setting">
+                <label>Secondary Glow Color:</label>
+                <input type="color" id="secondaryColor" value="#ff00ff">
+            </div>
+            <div class="color-setting">
+                <label>Board Light Square:</label>
+                <input type="color" id="lightSquare" value="#1a1a2e">
+            </div>
+            <div class="color-setting">
+                <label>Board Dark Square:</label>
+                <input type="color" id="darkSquare" value="#2a2a4e">
+            </div>
+            <div class="color-setting">
+                <label>Danger Color:</label>
+                <input type="color" id="dangerColor" value="#ff0000">
+            </div>
+            <div class="color-setting">
+                <label>Move Line Color:</label>
+                <input type="color" id="moveLineColor" value="#ff8c00">
+            </div>
+            <div class="settings-actions">
+                <button class="settings-button-action" onclick="game.resetColors()">Reset Defaults</button>
+                <button class="settings-button-action" onclick="game.applyColors()">Apply</button>
+            </div>
         </div>
     </div>
 
@@ -601,6 +747,7 @@
                 this.moveStack = []; // Add this line to store move history
                 this.previousAIScore = 0;  // Add this line
                 this.initializeCanvas();
+                this.initializeSettings();
             }
 
             initializeLogging() {
@@ -1771,8 +1918,8 @@
 
                 // Draw glow effect
                 this.ctx.shadowBlur = 15;
-                this.ctx.shadowColor = '#ff8c00';
-                this.ctx.strokeStyle = '#ff8c00';
+                this.ctx.shadowColor = this.colors.moveLineColor;
+                this.ctx.strokeStyle = this.colors.moveLineColor;
                 this.ctx.lineWidth = 3;
                 this.ctx.lineCap = 'round';
 
@@ -1787,6 +1934,86 @@
                 this.ctx.arc(startX, startY, 5, 0, Math.PI * 2);
                 this.ctx.arc(endX, endY, 5, 0, Math.PI * 2);
                 this.ctx.fill();
+            }
+
+            initializeSettings() {
+                this.defaultColors = {
+                    primaryColor: '#00ffff',
+                    secondaryColor: '#ff00ff',
+                    lightSquare: '#1a1a2e',
+                    darkSquare: '#2a2a4e',
+                    dangerColor: '#ff0000',
+                    moveLineColor: '#ff8c00'
+                };
+                
+                // Load saved colors or use defaults
+                this.colors = JSON.parse(localStorage.getItem('chessColors')) || {...this.defaultColors};
+                
+                // Initialize color inputs
+                Object.entries(this.colors).forEach(([key, value]) => {
+                    const input = document.getElementById(key);
+                    if (input) input.value = value;
+                });
+                
+                // Apply saved colors
+                this.applyColors();
+            }
+
+            toggleSettings() {
+                const overlay = document.getElementById('settingsOverlay');
+                overlay.style.display = overlay.style.display === 'flex' ? 'none' : 'flex';
+            }
+
+            resetColors() {
+                Object.entries(this.defaultColors).forEach(([key, value]) => {
+                    const input = document.getElementById(key);
+                    if (input) input.value = value;
+                });
+                this.applyColors();
+            }
+
+            applyColors() {
+                // Get current values from inputs
+                const colors = {};
+                Object.keys(this.defaultColors).forEach(key => {
+                    const input = document.getElementById(key);
+                    if (input) colors[key] = input.value;
+                });
+                
+                // Save to localStorage
+                localStorage.setItem('chessColors', JSON.stringify(colors));
+                this.colors = colors;
+
+                // Apply CSS variables
+                document.documentElement.style.setProperty('--primary-color', colors.primaryColor);
+                document.documentElement.style.setProperty('--secondary-color', colors.secondaryColor);
+                document.documentElement.style.setProperty('--light-square', colors.lightSquare);
+                document.documentElement.style.setProperty('--dark-square', colors.darkSquare);
+                document.documentElement.style.setProperty('--danger-color', colors.dangerColor);
+                document.documentElement.style.setProperty('--move-line-color', colors.moveLineColor);
+
+                // Update existing elements
+                this.updateStyles();
+                this.renderBoard();
+            }
+
+            updateStyles() {
+                const style = document.createElement('style');
+                style.textContent = `
+                    .white { background: var(--light-square) !important; }
+                    .black { background: var(--dark-square) !important; }
+                    .valid-move::after { border-color: var(--primary-color); box-shadow: 0 0 10px var(--primary-color); }
+                    .valid-capture::after { border-color: var(--secondary-color); box-shadow: 0 0 10px var(--secondary-color); }
+                    .valid-move.dangerous::after { border-color: var(--danger-color); box-shadow: 0 0 10px var(--danger-color); }
+                    .valid-capture.dangerous::after { border-color: var(--danger-color); box-shadow: 0 0 10px var(--danger-color); }
+                `;
+                
+                // Remove previous dynamic styles if they exist
+                const oldStyle = document.getElementById('dynamicStyles');
+                if (oldStyle) oldStyle.remove();
+                
+                style.id = 'dynamicStyles';
+                document.head.appendChild(style);
             }
         }
 
