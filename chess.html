@@ -30,6 +30,9 @@
         .game-left {
             flex: 1;
             max-width: 400px;
+            position: relative; /* Add this */
+            display: flex;
+            flex-direction: column;
         }
 
         .game-right {
@@ -37,6 +40,21 @@
             display: flex;
             flex-direction: column;
             gap: 20px;
+        }
+
+        .board-container {
+            position: relative;
+            width: 100%;
+        }
+
+        .move-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 2;
         }
 
         .board {
@@ -52,6 +70,7 @@
             display: grid;
             grid-template: repeat(8, 1fr) / repeat(8, 1fr);
             border: 2px solid #ff00ff;
+            position: relative;
         }
 
         .square {
@@ -480,6 +499,17 @@
             box-shadow: inset 0 0 30px #ff0000;
             background: rgba(255, 140, 0, 0.2) !important;
         }
+
+        /* Add new styles */
+        .move-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 2;
+        }
     </style>
 </head>
 <body>
@@ -495,7 +525,10 @@
                     <button id="revertButton" class="control-button" disabled>Revert Move</button>
                 </div>
             </div>
-            <div class="board" id="board"></div>
+            <div class="board-container">
+                <canvas class="move-canvas" id="moveCanvas"></canvas>
+                <div class="board" id="board"></div>
+            </div>
         </div>
         <div class="game-right">
             <div class="game-info">
@@ -557,6 +590,7 @@
                 this.moveNotation = [];
                 this.moveStack = []; // Add this line to store move history
                 this.previousAIScore = 0;  // Add this line
+                this.initializeCanvas();
             }
 
             initializeLogging() {
@@ -1401,16 +1435,24 @@
                 setTimeout(() => {
                     const move = this.findBestMove();
                     if (move) {
-                        // Update the AI score display with both current and previous scores
+                        // Draw the move line
+                        this.drawMoveLine(move.startRow, move.startCol, move.endRow, move.endCol);
+
+                        // Update the AI score display
                         const aiScoreElement = document.getElementById('ai-score');
                         aiScoreElement.textContent = `AI Score: ${move.score} (prev: ${this.previousAIScore})`;
                         this.previousAIScore = move.score;
                         
                         this.movePiece(move.startRow, move.startCol, move.endRow, move.endCol);
                         this.renderBoard();
+
+                        // Clear the line after a delay
+                        setTimeout(() => {
+                            this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                        }, 1500);
                     }
                     spinner.style.display = 'none';
-                }, 50); // Small delay to allow board to render
+                }, 50);
             }
 
             initializeControls() {
@@ -1639,7 +1681,7 @@
 
             revertMove() {
                 if (this.moveStack.length === 0) return false;
-                
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
                 const prevState = this.moveStack.pop();
                 this.board = prevState.board;
                 this.currentPlayer = prevState.currentPlayer;
@@ -1683,6 +1725,58 @@
 
                 const oppositeColor = piece.color === 'WHITE' ? 'BLACK' : 'WHITE';
                 return this.isSquareUnderAttack(row, col, oppositeColor);
+            }
+
+            initializeCanvas() {
+                this.canvas = document.getElementById('moveCanvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.resizeCanvas();
+                window.addEventListener('resize', () => this.resizeCanvas());
+            }
+
+            resizeCanvas() {
+                const board = document.getElementById('board');
+                const rect = board.getBoundingClientRect();
+                this.canvas.style.width = rect.width + 'px';
+                this.canvas.style.height = rect.width + 'px'; // Keep it square
+                
+                // Set actual canvas dimensions (multiplied for better resolution)
+                this.canvas.width = rect.width * 2;
+                this.canvas.height = rect.width * 2;
+                this.ctx.scale(2, 2); // Scale up for retina display
+                
+                this.squareSize = rect.width / 8;
+                
+                // Clear any existing lines when resizing
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+            }
+
+            drawMoveLine(startRow, startCol, endRow, endCol) {
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                const startX = (startCol + 0.5) * this.squareSize;
+                const startY = (startRow + 0.5) * this.squareSize;
+                const endX = (endCol + 0.5) * this.squareSize;
+                const endY = (endRow + 0.5) * this.squareSize;
+
+                // Draw glow effect
+                this.ctx.shadowBlur = 15;
+                this.ctx.shadowColor = '#ff8c00';
+                this.ctx.strokeStyle = '#ff8c00';
+                this.ctx.lineWidth = 3;
+                this.ctx.lineCap = 'round';
+
+                // Draw the line
+                this.ctx.beginPath();
+                this.ctx.moveTo(startX, startY);
+                this.ctx.lineTo(endX, endY);
+                this.ctx.stroke();
+
+                // Draw circles at start and end points
+                this.ctx.beginPath();
+                this.ctx.arc(startX, startY, 5, 0, Math.PI * 2);
+                this.ctx.arc(endX, endY, 5, 0, Math.PI * 2);
+                this.ctx.fill();
             }
         }
 
