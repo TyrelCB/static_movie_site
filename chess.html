@@ -264,7 +264,11 @@
                 max-width: 400px;
             }
 
-            .difficulty-control, .game-info, .game-log {
+            .difficulty-control {
+                margin-bottom: 15px;
+            } 
+            
+            .game-info, .game-log {
                 margin-bottom: 10px;
                 padding: 15px;
             }
@@ -311,18 +315,15 @@
         }
 
         .difficulty-control {
-            background: #1a1a2e;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 0 15px #00ffff80;
-            border: 1px solid #00ffff;
             margin-bottom: 20px;
+            border-bottom: 1px solid #00ffff40;
+            padding-bottom: 20px;
         }
 
         .difficulty-slider {
-            width: 100%;
-            margin: 10px 0;
-            appearance: none;
+            width: 69%;
+            /* margin: 10px 0; */
+            /* appearance: none; */
             height: 4px;
             background: #2a2a4e;
             border-radius: 2px;
@@ -333,19 +334,19 @@
             appearance: none;
             width: 20px;
             height: 20px;
-            background: #ff00ff;
+            background: var(--primary-color);
             border-radius: 50%;
             cursor: pointer;
-            box-shadow: 0 0 15px #ff00ff;
+            box-shadow: 0 0 15px var(--primary-color);
         }
 
         .difficulty-label {
             font-size: 1.1em;
-            color: #00ffff;
-            display: flex;
+            color: var(--primary-color);
+            /* display: flex; */
             justify-content: space-between;
             align-items: center;
-            text-shadow: 0 0 5px #00ffff;
+            text-shadow: 0 0 5px var(--primary-color);
         }
 
         .modal {
@@ -627,18 +628,39 @@
             background: #ff00ff;
             box-shadow: 0 0 10px #ff00ff;
         }
+
+        .difficulty-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .difficulty-button {
+            flex: 1;
+            padding: 8px;
+            background: #1a1a2e;
+            border: 1px solid var(--primary-color);
+            color: var(--primary-color);
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .difficulty-button:hover {
+            background: #2a2a4e;
+            box-shadow: 0 0 10px var(--primary-color);
+        }
+
+        .difficulty-button.active {
+            background: var(--primary-color);
+            color: #1a1a2e;
+            box-shadow: 0 0 15px var(--primary-color);
+        }
     </style>
 </head>
 <body>
     <div class="game-container">
         <div class="game-left">
-            <div class="difficulty-control">
-                <div class="difficulty-label">
-                    <span>AI Difficulty:</span>
-                    <span id="depth-value">3</span>
-                </div>
-                <input type="range" min="1" max="4" value="3" class="difficulty-slider" id="depth-slider">
-            </div>
             <div class="board-container">
                 <canvas class="move-canvas" id="moveCanvas"></canvas>
                 <div class="board" id="board"></div>
@@ -671,6 +693,15 @@
                 <h2>Game Settings</h2>
                 <button class="settings-close" onclick="game.toggleSettings()">×</button>
             </div>
+            <div class="difficulty-control">
+                <label class="difficulty-label">AI Difficulty:</label>
+                <div class="difficulty-buttons">
+                    <button class="difficulty-button" data-depth="1">Easy</button>
+                    <button class="difficulty-button" data-depth="2">Medium</button>
+                    <button class="difficulty-button active" data-depth="3">Hard</button>
+                    <button class="difficulty-button" data-depth="4">Expert</button>
+                </div>
+            </div>
             <div class="color-setting">
                 <label>Primary Glow Color:</label>
                 <input type="color" id="primaryColor" value="#00ffff">
@@ -696,18 +727,18 @@
                 <input type="color" id="moveLineColor" value="#ff8c00">
             </div>
             <div class="settings-actions">
-                <button class="settings-button-action" onclick="game.resetColors()">Reset Defaults</button>
                 <button class="settings-button-action" onclick="game.applyColors()">Apply</button>
+                <button class="settings-button-action" onclick="game.resetColors()">Reset</button>
             </div>
         </div>
     </div>
 
-    <div id="checkmateModal" class="modal">
+    <div class="modal" id="checkmateModal">
         <div class="modal-content">
-            <button class="modal-close" onclick="document.getElementById('checkmateModal').classList.remove('show')">×</button>
-            <h2>Game Over!</h2>
+            <h2>Game Over</h2>
             <p id="modalMessage"></p>
             <button class="modal-button" onclick="location.reload()">Play Again</button>
+            <button class="modal-close" onclick="document.getElementById('checkmateModal').classList.remove('show')">×</button>
         </div>
     </div>
 
@@ -1613,12 +1644,17 @@
             }
 
             initializeControls() {
-                const slider = document.getElementById('depth-slider');
-                const depthValue = document.getElementById('depth-value');
-                
-                slider.addEventListener('input', (e) => {
-                    this.searchDepth = parseInt(e.target.value);
-                    depthValue.textContent = this.searchDepth;
+                // Replace slider event listener with button listeners
+                document.querySelectorAll('.difficulty-button').forEach(button => {
+                    button.addEventListener('click', (e) => {
+                        // Remove active class from all buttons
+                        document.querySelectorAll('.difficulty-button').forEach(b => 
+                            b.classList.remove('active'));
+                        // Add active class to clicked button
+                        e.target.classList.add('active');
+                        // Update search depth
+                        this.searchDepth = parseInt(e.target.dataset.depth);
+                    });
                 });
 
                 // Add revert button listener
