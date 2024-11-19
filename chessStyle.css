@@ -1,0 +1,652 @@
+
+body {
+    margin: 0;
+    padding: 20px;
+    background: #0a0a0f;
+    font-family: 'Roboto', sans-serif;
+    display: flex;
+    justify-content: center;
+    min-height: 100vh;
+    /* color: #00ff00; */
+}
+
+.game-container {
+    display: flex;
+    gap: 30px;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 10px;
+    gap: 20px;
+    width: 100%;
+    position: relative;  /* Add this */
+}
+
+.game-left {
+    flex: 1;
+    max-width: 400px;
+    position: relative; /* Add this */
+    display: flex;
+    flex-direction: column;
+}
+
+.game-right {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.board-container {
+    position: relative;
+    width: 100%;
+}
+
+.move-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    margin: 0 auto;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 2;
+}
+
+.board {
+    width: 100%;
+    max-width: 400px;
+    height: auto;
+    aspect-ratio: 1;
+    margin: 0 auto;
+    border-radius: 4px;
+    box-shadow: 0 0 20px #ff00ff, 0 0 40px #ff00ff80;
+    overflow: hidden;
+    background: #1a1a2e;
+    display: grid;
+    grid-template: repeat(8, 1fr) / repeat(8, 1fr);
+    border: 2px solid #ff00ff;
+    position: relative;
+}
+
+.square {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: min(5vw, 2.2em);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-shadow: none; /* Remove existing text shadow */
+    position: relative;
+}
+
+/* White pieces get cyan glow */
+.square:has(span.white-piece) {
+    color: #fff;
+    text-shadow: 0 0 10px #00ffff,
+                0 0 20px #00ffff,
+                0 0 30px #00ffff;
+}
+
+/* Black pieces get magenta glow */
+.square:has(span.black-piece) {
+    color: #ffffff;
+    text-shadow: 0 0 10px #ffffff,
+                0 0 20px #000000,
+                0 0 30px #000000;
+}
+
+.white-piece {
+    color: #fff;
+    filter: brightness(1.2);
+    z-index: 3;
+}
+
+.black-piece {
+    color: #000000;
+    filter: brightness(1.2);
+    z-index: 3;
+}
+
+/* Enhance selected piece glow */
+.selected:has(span.white-piece) {
+    background: #103040 !important;
+    box-shadow: inset 0 0 30px #00ffff;
+}
+
+.selected:has(span.black-piece) {
+    background: #401040 !important;
+    box-shadow: inset 0 0 30px #ff00ff;
+}
+
+.square:hover {
+    transform: scale(1.05);
+    z-index: 1;
+    box-shadow: inset 0 0 20px #00ffff80;
+}
+
+.white { background: #1a1a2e; }
+.black { background: #2a2a4e; }
+
+.selected { 
+    background: #4a1a4e !important;
+    box-shadow: inset 0 0 30px #ff00ff;
+    text-shadow: 0 0 15px #ff00ff;
+}
+
+.valid-move::after {
+    content: '';
+    position: absolute;
+    width: 25px;
+    height: 25px;
+    background: #00ffff40;
+    border: 2px solid #00ffff;
+    border-radius: 50%;
+    box-shadow: 0 0 10px #00ffff;
+    opacity: 0.8;
+    transition: all 0.2s ease;
+}
+
+.valid-capture::after {
+    border: 2px solid #ff00ff;
+    background: #ff00ff40;
+    box-shadow: 0 0 10px #ff00ff;
+}
+
+.game-info {
+    background: #1a1a2e;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 0 15px #00ffff80;
+    border: 1px solid #00ffff;
+}
+
+.ai-score {
+    margin-top: 10px;
+    padding: 5px 0;
+    color: #00ffff;
+    font-family: monospace;
+    font-size: 0.9em;
+    border-top: 1px solid #2a2a4e;
+}
+
+#turn {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px 0;
+    font-size: 1.5em;
+    font-weight: 500;
+    color: #00ffff;
+    text-shadow: 0 0 10px #00ffff;
+    margin-bottom: 10px;
+}
+
+.turn-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.move-counter {
+    color: #ff00ff;
+    font-size: 0.9em;
+    text-shadow: 0 0 10px #ff00ff;
+}
+
+#status {
+    font-size: 1.2em;
+    color: #ff00ff;
+    text-shadow: 0 0 10px #ff00ff;
+    font-weight: 300;
+}
+
+.game-log {
+    background: #1a1a2e;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 0 15px #00ffff80;
+    border: 1px solid #00ffff;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.log-entry {
+    padding: 8px;
+    border-bottom: 1px solid #2a2a4e;
+    color: #00ffff;
+    font-size: 0.9em;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.move-number {
+    color: #ff00ff;
+    margin-right: 10px;
+}
+
+.move-text {
+    font-family: monospace;
+}
+
+.log-entry:last-child {
+    border-bottom: none;
+}
+
+@media (max-width: 768px) {
+    .game-container {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .game-right {
+        width: 100%;
+        max-width: 400px;
+    }
+
+    body {
+        padding: 10px;
+    }
+
+    .game-container {
+        flex-direction: column;
+    }
+    
+    .game-left, .game-right {
+        width: 100%;
+        /* max-width: 100%; */
+        max-width: 400px;
+    }
+
+    .difficulty-control {
+        margin-bottom: 15px;
+    } 
+    
+    .game-info, .game-log {
+        margin-bottom: 10px;
+        padding: 15px;
+    }
+
+    .game-log {
+        max-height: 200px;
+    }
+
+    #turn {
+        font-size: 1.2em;
+    }
+
+    .difficulty-label {
+        font-size: 1em;
+    }
+}
+
+@media (max-width: 480px) {
+    .square {
+        font-size: 6vw;
+    }
+
+    .game-log {
+        max-height: 150px;
+    }
+}
+
+.spinner {
+    display: none;  /* Changed from display: inline-block */
+    width: 20px;
+    height: 20px;
+    border: 3px solid #1a1a2e;
+    border-top: 3px solid #00ffff;
+    border-radius: 50%;
+    margin-left: 10px;
+    animation: spin 1s linear infinite;
+    vertical-align: middle;
+    box-shadow: 0 0 15px #00ffff;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.difficulty-control {
+    margin-bottom: 20px;
+    border-bottom: 1px solid #00ffff40;
+    padding-bottom: 20px;
+}
+
+.difficulty-slider {
+    width: 69%;
+    /* margin: 10px 0; */
+    /* appearance: none; */
+    height: 4px;
+    background: #2a2a4e;
+    border-radius: 2px;
+    outline: none;
+}
+
+.difficulty-slider::-webkit-slider-thumb {
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    background: var(--primary-color);
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 0 15px var(--primary-color);
+}
+
+.difficulty-label {
+    font-size: 1.1em;
+    color: var(--primary-color);
+    /* display: flex; */
+    justify-content: space-between;
+    align-items: center;
+    text-shadow: 0 0 5px var(--primary-color);
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.8);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+}
+
+.modal.show {
+    display: flex;
+}
+
+.modal-content {
+    background: #1a1a2e;
+    padding: 30px;
+    border-radius: 12px;
+    text-align: center;
+    max-width: 400px;
+    width: 90%;
+    border: 2px solid #00ffff;
+    box-shadow: 0 0 30px #00ffff80;
+    animation: modalAppear 0.3s ease-out;
+    position: relative;
+}
+
+@keyframes modalAppear {
+    from {
+        transform: scale(0.8);
+        opacity: 0;
+    }
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.modal h2 {
+    color: #00ffff;
+    margin: 0 0 20px 0;
+    text-shadow: 0 0 10px #00ffff;
+}
+
+.modal p {
+    color: #ffffff;
+    margin: 0 0 30px 0;
+    font-size: 1.2em;
+}
+
+.modal-button {
+    background: #00ffff;
+    color: #1a1a2e;
+    border: none;
+    padding: 10px 30px;
+    border-radius: 5px;
+    font-size: 1.1em;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.modal-button:hover {
+    background: #ff00ff;
+    box-shadow: 0 0 15px #ff00ff;
+    transform: scale(1.05);
+}
+
+/* Add new CSS for dangerous moves */
+.valid-move.dangerous::after {
+    border: 2px solid #ff0000;
+    background: #ff000040;
+    box-shadow: 0 0 10px #ff0000;
+}
+
+.valid-capture.dangerous::after {
+    border: 2px solid #ff0000;
+    background: #ff000040;
+    box-shadow: 0 0 10px #ff0000;
+}
+
+.modal-close {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: none;
+    border: none;
+    color: #00ffff;
+    font-size: 1.5em;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    padding: 5px;
+    line-height: 0.8;
+    border-radius: 20%;
+}
+
+.modal-close:hover {
+    color: #ff00ff;
+    transform: scale(1.1);
+}
+
+.modal-content {
+    position: relative;
+    /* ...existing modal-content styles... */
+}
+
+.valid-move.checkmate::after {
+    border: 2px solid #00ff00;
+    background: #00ff0040;
+    box-shadow: 0 0 10px #00ff00;
+}
+
+.valid-capture.checkmate::after {
+    border: 2px solid #00ff00;
+    background: #00ff0040;
+    box-shadow: 0 0 10px #00ff00;
+}
+
+.control-buttons {
+    margin-top: 10px;
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+
+.control-button {
+    background: #1a1a2e;
+    color: #00ffff;
+    border: 1px solid #00ffff;
+    padding: 8px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: all 0.2s ease;
+}
+
+.control-button:hover {
+    background: #2a2a4e;
+    box-shadow: 0 0 10px #00ffff;
+    transform: scale(1.05);
+}
+
+.control-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.endangered {
+    box-shadow: inset 0 0 30px #ff0000;
+    background: rgba(255, 140, 0, 0.2) !important;
+    border-radius: 50%;
+}
+
+/* Add new styles */
+.move-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 2;
+}
+
+.button-container {
+    margin-top: 20px;
+    display: flex;
+    justify-content: center;
+}
+
+/* Add new settings styles */
+.settings-button {
+    position: relative;  /* Changed from absolute */
+    margin-bottom: 10px;  /* Added margin */
+    background: #1a1a2e;
+    color: #00ffff;
+    border: 1px solid #00ffff;
+    padding: 10px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    align-self: flex-end;  /* Added to align right */
+}
+
+.settings-button:hover {
+    background: #2a2a4e;
+    box-shadow: 0 0 10px #00ffff;
+}
+
+.settings-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.9);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+}
+
+.settings-panel {
+    background: #1a1a2e;
+    padding: 30px;
+    border-radius: 12px;
+    border: 2px solid #00ffff;
+    box-shadow: 0 0 30px #00ffff80;
+    max-width: 600px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.settings-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.settings-header h2 {
+    color: #00ffff;
+    margin: 0;
+}
+
+.settings-close {
+    background: none;
+    border: none;
+    color: #00ffff;
+    font-size: 1.5em;
+    cursor: pointer;
+}
+
+.color-setting {
+    display: flex;
+    align-items: center;
+    margin-bottom: 15px;
+    gap: 10px;
+}
+
+.color-setting label {
+    color: #00ffff;
+    flex: 1;
+}
+
+.color-setting input {
+    width: 60px;
+    height: 30px;
+    padding: 0;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.settings-actions {
+    margin-top: 20px;
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+}
+
+.settings-button-action {
+    background: #00ffff;
+    color: #1a1a2e;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.settings-button-action:hover {
+    background: #ff00ff;
+    box-shadow: 0 0 10px #ff00ff;
+}
+
+.difficulty-buttons {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.difficulty-button {
+    flex: 1;
+    padding: 8px;
+    background: #1a1a2e;
+    border: 1px solid var(--primary-color);
+    color: var(--primary-color);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.difficulty-button:hover {
+    background: #2a2a4e;
+    box-shadow: 0 0 10px var(--primary-color);
+}
+
+.difficulty-button.active {
+    background: var(--primary-color);
+    color: #1a1a2e;
+    box-shadow: 0 0 15px var(--primary-color);
+}
