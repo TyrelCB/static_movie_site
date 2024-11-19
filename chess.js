@@ -1,4 +1,3 @@
-
 const PIECES = {
     WHITE: {
         KING: '♔', QUEEN: '♕', ROOK: '♖',
@@ -1236,7 +1235,10 @@ class Chess {
             lightSquare: '#1a1a2e',
             darkSquare: '#2a2a4e',
             dangerColor: '#ff0000',
-            moveLineColor: '#ff8c00'
+            moveLineColor: '#ff8c00',
+            checkmateColor: '#00ff00',
+            whitePieceColor: '#ffffff',
+            blackPieceColor: '#000000'
         };
         
         // Load saved colors or use defaults
@@ -1284,6 +1286,9 @@ class Chess {
         document.documentElement.style.setProperty('--dark-square', colors.darkSquare);
         document.documentElement.style.setProperty('--danger-color', colors.dangerColor);
         document.documentElement.style.setProperty('--move-line-color', colors.moveLineColor);
+        document.documentElement.style.setProperty('--checkmate-color', colors.checkmateColor);
+        document.documentElement.style.setProperty('--white-piece-color', colors.whitePieceColor);
+        document.documentElement.style.setProperty('--black-piece-color', colors.blackPieceColor);
 
         // Update existing elements
         this.updateStyles();
@@ -1302,6 +1307,10 @@ class Chess {
             .valid-capture::after { border-color: var(--secondary-color); box-shadow: 0 0 10px var(--secondary-color); }
             .valid-move.dangerous::after { border-color: var(--danger-color); box-shadow: 0 0 10px var(--danger-color); }
             .valid-capture.dangerous::after { border-color: var(--danger-color); box-shadow: 0 0 10px var(--danger-color); }
+            .valid-move.checkmate::after { border-color: var(--checkmate-color); box-shadow: 0 0 10px var(--checkmate-color); }
+            .valid-capture.checkmate::after { border-color: var(--checkmate-color); box-shadow: 0 0 10px var(--checkmate-color); }
+            .white-piece { color: var(--white-piece-color); }
+            .black-piece { color: var(--black-piece-color); }
         `;
         
         // Remove previous dynamic styles if they exist
