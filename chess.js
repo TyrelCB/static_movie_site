@@ -220,7 +220,7 @@ class Chess {
 
         // Check if rook exists and hasn't moved
         if (!rook || rook.type !== 'ROOK' || rook.hasMoved) {
-            console.log('Invalid rook state for castling');
+            // console.log('Invalid rook state for castling');
             return false;
         }
 
@@ -233,7 +233,7 @@ class Chess {
         for (let col = pathStart; direction === 1 ? col <= pathEnd : col >= pathEnd; col += step) {
             // Skip checking occupancy of starting square
             if (col !== startCol && this.board[startRow][col] !== null) {
-                console.log('Path is blocked for castling');
+                // console.log('Path is blocked for castling');
                 return false;
             }
             // Check if square is under attack (including starting and ending squares)
@@ -321,6 +321,9 @@ class Chess {
         // Prevent capturing kings during evaluation
         const targetPiece = this.board[endRow][endCol];
         if (targetPiece && targetPiece.type === 'KING') return false;
+
+        // Prevent moving to a square occupied by a piece of the same color
+        if (targetPiece && targetPiece.color === color) return false;
 
         // Try the move
         const savedTarget = this.board[endRow][endCol];
@@ -887,6 +890,7 @@ class Chess {
 
         // Find all moves that have the best score
         const bestMoves = validMoves.filter(move => move.score === bestScore);
+        console.log('Best moves:', bestMoves);
         
         // Randomly select one of the best moves
         const selectedMove = bestMoves[Math.floor(Math.random() * bestMoves.length)];
