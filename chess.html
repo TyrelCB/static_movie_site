@@ -41,6 +41,16 @@
                 <h2>Game Settings</h2>
                 <button class="settings-close" onclick="game.toggleSettings()">×</button>
             </div>
+            
+            <div class="piece-setting">
+                <label>Piece Style:</label>
+                <select id="pieceSetSelect" onchange="game.pieceSet = this.value; game.applySettings()">
+                    <option value="unicode">Unicode Symbols</option>
+                    <option value="text">Text Characters</option>
+                    <option value="fancy">Fancy Emoji</option>
+                </select>
+            </div>
+            
             <div class="difficulty-control">
                 <label class="difficulty-label">AI Difficulty:</label>
                 <div class="difficulty-buttons">

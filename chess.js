@@ -1,13 +1,37 @@
-const PIECES = {
-    WHITE: {
-        KING: '♔', QUEEN: '♕', ROOK: '♖',
-        BISHOP: '♗', KNIGHT: '♘', PAWN: '♙'
+const PIECE_SETS = {
+    unicode: {
+        WHITE: {
+            KING: '♔', QUEEN: '♕', ROOK: '♖',
+            BISHOP: '♗', KNIGHT: '♘', PAWN: '♙'
+        },
+        BLACK: {
+            KING: '♚', QUEEN: '♛', ROOK: '♜',
+            BISHOP: '♝', KNIGHT: '♞', PAWN: '♟'
+        }
     },
-    BLACK: {
-        KING: '♚', QUEEN: '♛', ROOK: '♜',
-        BISHOP: '♝', KNIGHT: '♞', PAWN: '♟'
+    text: {
+        WHITE: {
+            KING: 'K', QUEEN: 'Q', ROOK: 'R',
+            BISHOP: 'B', KNIGHT: 'N', PAWN: 'P'
+        },
+        BLACK: {
+            KING: 'k', QUEEN: 'q', ROOK: 'r',
+            BISHOP: 'b', KNIGHT: 'n', PAWN: 'p'
+        }
+    },
+    fancy: {
+        WHITE: {
+            KING: '👑', QUEEN: '👸', ROOK: '🏰',
+            BISHOP: '⛪', KNIGHT: '🐎', PAWN: '👥'
+        },
+        BLACK: {
+            KING: '👑', QUEEN: '👸', ROOK: '🏰',
+            BISHOP: '⛪', KNIGHT: '🐎', PAWN: '👥'
+        }
     }
 };
+
+// Remove the PIECES constant, we'll use PIECE_SETS directly
 
 class Chess {
     constructor() {
@@ -33,6 +57,7 @@ class Chess {
         this.moveStack = []; // Add this line to store move history
         this.previousAIScore = 0;  // Add this line
         this.initializeCanvas();
+        this.pieceSet = localStorage.getItem('chessPieceSet') || 'unicode';  // Load saved piece set or use default
         this.initializeSettings();
     }
 
@@ -189,7 +214,7 @@ class Chess {
 
         // Cannot castle while in check
         if (this.isInCheck(kingColor)) {
-            console.log('Cannot castle while in check');
+            // console.log('Cannot castle while in check');
             return false;
         }
 
@@ -213,7 +238,7 @@ class Chess {
             }
             // Check if square is under attack (including starting and ending squares)
             if (this.isSquareUnderAttack(startRow, col, oppositeColor)) {
-                console.log(`Square ${startRow},${col} is under attack`);
+                // console.log(`Square ${startRow},${col} is under attack`);
                 return false;
             }
         }
@@ -634,7 +659,7 @@ class Chess {
                 if (piece) {
                     const pieceSpan = document.createElement('span');
                     pieceSpan.className = `${piece.color.toLowerCase()}-piece`;
-                    pieceSpan.textContent = PIECES[piece.color][piece.type];
+                    pieceSpan.textContent = PIECE_SETS[this.pieceSet || 'unicode'][piece.color][piece.type];
                     square.appendChild(pieceSpan);
                 }
 
@@ -1241,17 +1266,27 @@ class Chess {
             blackPieceColor: '#000000'
         };
         
-        // Load saved colors or use defaults
-        this.colors = JSON.parse(localStorage.getItem('chessColors')) || {...this.defaultColors};
+        // Add piece set to settings
+        this.defaultSettings = {
+            colors: this.defaultColors,
+            pieceSet: 'unicode'
+        };
         
-        // Initialize color inputs
+        // Load saved settings or use defaults
+        const savedSettings = JSON.parse(localStorage.getItem('chessSettings')) || this.defaultSettings;
+        this.colors = savedSettings.colors;
+        this.pieceSet = savedSettings.pieceSet;
+        
+        // Initialize color inputs and piece set selector
         Object.entries(this.colors).forEach(([key, value]) => {
             const input = document.getElementById(key);
             if (input) input.value = value;
         });
         
-        // Apply saved colors
-        this.applyColors();
+        const pieceSetSelect = document.getElementById('pieceSetSelect');
+        if (pieceSetSelect) pieceSetSelect.value = this.pieceSet;
+        
+        this.applySettings();
     }
 
     toggleSettings() {
@@ -1296,6 +1331,20 @@ class Chess {
 
         // Close settings after applying
         this.toggleSettings();
+    }
+
+    applySettings() {
+        // Save all settings including piece set
+        const settings = {
+            colors: this.colors,
+            pieceSet: this.pieceSet
+        };
+        localStorage.setItem('chessSettings', JSON.stringify(settings));
+        localStorage.setItem('chessPieceSet', this.pieceSet); // Save piece set separately for initialization
+
+        // Apply colors and update pieces
+        this.applyColors();
+        this.renderBoard();
     }
 
     updateStyles() {

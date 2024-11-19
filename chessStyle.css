@@ -649,3 +649,37 @@ body {
     color: #1a1a2e;
     box-shadow: 0 0 15px var(--primary-color);
 }
+
+.piece-setting {
+    display: flex;
+    align-items: center;
+    margin-bottom: 15px;
+    gap: 10px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #00ffff40;
+}
+
+.piece-setting label {
+    color: #00ffff;
+    flex: 1;
+}
+
+.piece-setting select {
+    background: #1a1a2e;
+    color: #00ffff;
+    border: 1px solid #00ffff;
+    padding: 8px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+    min-width: 150px;
+}
+
+.piece-setting select:hover {
+    background: #2a2a4e;
+    box-shadow: 0 0 10px #00ffff;
+}
+
+.piece-setting option {
+    background: #1a1a2e;
+    color: #00ffff;
+}
