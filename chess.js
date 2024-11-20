@@ -21,12 +21,12 @@ const PIECE_SETS = {
     },
     fancy: {
         WHITE: {
-            KING: '👑', QUEEN: '👸', ROOK: '🏰',
-            BISHOP: '⛪', KNIGHT: '🐎', PAWN: '👥'
+            KING: '♔', QUEEN: '♕', ROOK: '♖',
+            BISHOP: '♗', KNIGHT: '♘', PAWN: '♙'
         },
         BLACK: {
-            KING: '👑', QUEEN: '👸', ROOK: '🏰',
-            BISHOP: '⛪', KNIGHT: '🐎', PAWN: '👥'
+            KING: '♔', QUEEN: '♕', ROOK: '♖',
+            BISHOP: '♗', KNIGHT: '♘', PAWN: '♙'
         }
     }
 };
