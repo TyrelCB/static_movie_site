@@ -602,14 +602,27 @@ class Chess {
         const validMoves = this.selectedPiece ? 
             this.getValidMovesForPiece(this.selectedPiece.row, this.selectedPiece.col) : [];
 
-        // Get opposing color for danger check
+        // Get opposing color
         const oppositeColor = this.currentPlayer === 'WHITE' ? 'BLACK' : 'WHITE';
+
+        // Get endangered pieces after potential move
+        let endangeredPieces = new Set();
+        if (this.selectedPiece && validMoves.length > 0) {
+            endangeredPieces = this.getEndangeredPiecesAfterMove();
+        }
 
         for (let row = 0; row < 8; row++) {
             for (let col = 0; col < 8; col++) {
                 const square = document.createElement('div');
                 square.className = `square ${(row + col) % 2 ? 'black' : 'white'}`;
                 
+                // Add endangered class if this piece would be in danger
+                if (endangeredPieces.has(`${row},${col}`)) {
+                    square.classList.add('endangered');
+                }
+
+                // Rest of the rendering code...
+                // ...existing code...
                 const piece = this.board[row][col];
 
                 // Highlight endangered pieces when no piece is selected
@@ -672,6 +685,43 @@ class Chess {
                 boardElement.appendChild(square);
             }
         }
+    }
+
+    getEndangeredPiecesAfterMove() {
+        const endangered = new Set();
+        if (!this.selectedPiece) return endangered;
+
+        const validMoves = this.getValidMovesForPiece(this.selectedPiece.row, this.selectedPiece.col);
+        const piece = this.board[this.selectedPiece.row][this.selectedPiece.col];
+        const originalPos = this.board[this.selectedPiece.row][this.selectedPiece.col];
+
+        for (const move of validMoves) {
+            // Save the current state
+            const targetPiece = this.board[move.row][move.col];
+
+            // Make temporary move
+            this.board[move.row][move.col] = piece;
+            this.board[this.selectedPiece.row][this.selectedPiece.col] = null;
+
+            // Check which friendly pieces would be in danger
+            for (let r = 0; r < 8; r++) {
+                for (let c = 0; c < 8; c++) {
+                    const checkPiece = this.board[r][c];
+                    if (checkPiece && checkPiece.color === piece.color &&
+                        (r !== move.row || c !== move.col)) {  // Don't check the moved piece
+                        if (this.isPieceInDanger(r, c)) {
+                            endangered.add(`${r},${c}`);
+                        }
+                    }
+                }
+            }
+
+            // Restore the board state
+            this.board[this.selectedPiece.row][this.selectedPiece.col] = originalPos;
+            this.board[move.row][move.col] = targetPiece;
+        }
+
+        return endangered;
     }
 
     handleSquareClick(event) {
