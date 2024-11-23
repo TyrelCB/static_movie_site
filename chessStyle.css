@@ -81,17 +81,17 @@ body {
 /* White pieces get cyan glow */
 .square:has(span.white-piece) {
     color: #fff;
-    text-shadow: 0 0 10px #00ffff,
+    /* text-shadow: 0 0 10px #00ffff,
                 0 0 20px #00ffff,
-                0 0 30px #00ffff;
+                0 0 30px #00ffff; */
 }
 
 /* Black pieces get magenta glow */
 .square:has(span.black-piece) {
     color: #ffffff;
-    text-shadow: 0 0 10px #ffffff,
+    /* text-shadow: 0 0 10px #ffffff,
                 0 0 20px #000000,
-                0 0 30px #000000;
+                0 0 30px #000000; */
 }
 
 .white-piece {
