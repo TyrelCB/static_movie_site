@@ -79,6 +79,7 @@
         <div class="context-menu-item">
             Color: <input type="color" id="color-picker">
         </div>
+        <div class="context-menu-item" id="toggle-dimensions">Toggle Dimensions</div>
     </div>
     <div id="snap-indicator" class="snap-indicator"></div>
 
@@ -103,6 +104,7 @@
         let contextMenuRect = null;
         const SNAP_THRESHOLD = 10; // pixels
         let snapIndicator = document.getElementById('snap-indicator');
+        let showDimensions = true;
 
         function feetInchesToPixels(feet, inches) {
             // Using 1 foot = 20 pixels for scale
@@ -174,24 +176,26 @@
                 ctx.fillRect(-rect.width/2, -rect.height/2, rect.width, rect.height);
                 ctx.restore();
                 
-                // Draw dimension labels
-                ctx.fillStyle = 'black';
-                ctx.font = '12px Arial';
-                
-                // Width label
-                const widthText = pixelsToFeetInches(rect.width);
-                const widthTextWidth = ctx.measureText(widthText).width;
-                ctx.fillText(widthText, 
-                    rect.x + (rect.width - widthTextWidth) / 2,
-                    rect.y - 5);
-                
-                // Height label
-                const heightText = pixelsToFeetInches(rect.height);
-                ctx.save();
-                ctx.translate(rect.x - 5, rect.y + (rect.height + ctx.measureText(heightText).width) / 2);
-                ctx.rotate(-Math.PI / 2);
-                ctx.fillText(heightText, 0, 0);
-                ctx.restore();
+                if (showDimensions) {
+                    // Draw dimension labels
+                    ctx.fillStyle = 'black';
+                    ctx.font = '12px Arial';
+                    
+                    // Width label
+                    const widthText = pixelsToFeetInches(rect.width);
+                    const widthTextWidth = ctx.measureText(widthText).width;
+                    ctx.fillText(widthText, 
+                        rect.x + (rect.width - widthTextWidth) / 2,
+                        rect.y - 5);
+                    
+                    // Height label
+                    const heightText = pixelsToFeetInches(rect.height);
+                    ctx.save();
+                    ctx.translate(rect.x - 5, rect.y + (rect.height + ctx.measureText(heightText).width) / 2);
+                    ctx.rotate(-Math.PI / 2);
+                    ctx.fillText(heightText, 0, 0);
+                    ctx.restore();
+                }
 
                 // Custom label
                 if (rect.label) {
@@ -443,6 +447,11 @@
                 contextMenuRect.color = e.target.value + '80'; // Add 50% transparency
                 drawAll();
             }
+        });
+
+        document.getElementById('toggle-dimensions').addEventListener('click', () => {
+            showDimensions = !showDimensions;
+            drawAll();
         });
     </script>
 </body>
