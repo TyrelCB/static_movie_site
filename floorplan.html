@@ -62,6 +62,7 @@
             margin: 0 auto;
             background-color: var(--canvas-background);
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            max-width: 100%;
         }
         #context-menu {
             background: var(--control-background);
@@ -103,6 +104,21 @@
         .theme-switch:hover {
             background-color: #0056b3;
         }
+        .undo-button {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            padding: 10px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .undo-button:hover {
+            background-color: #0056b3;
+        }
         :root {
             --background-color: #f4f4f9;
             --text-color: #333;
@@ -117,10 +133,26 @@
             --control-background: #444;
             --canvas-background: #555;
         }
+        @media (max-width: 600px) {
+            .controls {
+                flex-direction: column;
+                align-items: center;
+            }
+            .measurement-group {
+                margin-right: 0;
+                margin-bottom: 15px;
+            }
+            .theme-switch {
+                top: 10px;
+                right: 10px;
+                padding: 8px;
+            }
+        }
     </style>
 </head>
 <body>
     <button class="theme-switch" onclick="toggleTheme()">Switch Theme</button>
+    <button class="undo-button" onclick="undo()">Undo</button>
     <h1>Floorplan Designer</h1>
     <div class="controls">
         <div class="measurement-group">
@@ -157,6 +189,8 @@
         </div>
         <div class="context-menu-item" id="toggle-dimensions">Toggle Dimensions</div>
         <div class="context-menu-item" id="move-shape">Move Shape</div>
+        <div class="context-menu-item" id="bring-to-front">Bring to Front</div>
+        <div class="context-menu-item" id="send-to-back">Send to Back</div>
     </div>
     <div id="snap-indicator" class="snap-indicator"></div>
 
@@ -187,6 +221,21 @@
         let snapIndicator = document.getElementById('snap-indicator');
         let showDimensions = true;
         let isMoving = false;
+        let actionHistory = [];
+
+        function saveAction() {
+            actionHistory.push(JSON.stringify(rectangles));
+            if (actionHistory.length > 20) {
+                actionHistory.shift(); // Limit history to last 20 actions
+            }
+        }
+
+        function undo() {
+            if (actionHistory.length > 0) {
+                rectangles = JSON.parse(actionHistory.pop());
+                drawAll();
+            }
+        }
 
         function feetInchesToPixels(feet, inches) {
             // Using 1 foot = 20 pixels for scale
@@ -202,6 +251,7 @@
         }
 
         function addRectangle() {
+            saveAction();
             const widthFeet = parseInt(document.getElementById('width-feet').value) || 0;
             const widthInches = parseInt(document.getElementById('width-inches').value) || 0;
             const heightFeet = parseInt(document.getElementById('height-feet').value) || 0;
@@ -307,6 +357,7 @@
         }
 
         function duplicateShape(rect) {
+            saveAction();
             rectangles.push({
                 ...rect,
                 x: rect.x + 20,
@@ -316,6 +367,7 @@
         }
 
         function deleteShape(rect) {
+            saveAction();
             const index = rectangles.indexOf(rect);
             if (index > -1) {
                 rectangles.splice(index, 1);
@@ -324,6 +376,7 @@
         }
 
         function rotateShape(rect, degrees) {
+            saveAction();
             if (degrees === 90) {
                 [rect.width, rect.height] = [rect.height, rect.width];
             }
@@ -495,6 +548,7 @@
 
         document.getElementById('edit-label').addEventListener('click', () => {
             if (contextMenuRect) {
+                saveAction();
                 const newLabel = prompt('Enter new label:', contextMenuRect.label || '');
                 if (newLabel !== null) {
                     contextMenuRect.label = newLabel;
@@ -535,21 +589,56 @@
 
         document.getElementById('color-picker').addEventListener('input', (e) => {
             if (contextMenuRect) {
+                saveAction();
                 contextMenuRect.color = e.target.value + '80'; // Add 50% transparency
                 drawAll();
             }
         });
 
         document.getElementById('toggle-dimensions').addEventListener('click', () => {
+            saveAction();
             showDimensions = !showDimensions;
             drawAll();
         });
 
         document.getElementById('move-shape').addEventListener('click', () => {
             if (contextMenuRect) {
+                saveAction();
                 isMoving = true;
                 hideContextMenu();
                 canvas.style.cursor = 'move';
+            }
+        });
+
+        function bringToFront(rect) {
+            saveAction();
+            const index = rectangles.indexOf(rect);
+            if (index > -1) {
+                rectangles.splice(index, 1);
+                rectangles.push(rect);
+                drawAll();
+            }
+        }
+
+        function sendToBack(rect) {
+            saveAction();
+            const index = rectangles.indexOf(rect);
+            if (index > -1) {
+                rectangles.splice(index, 1);
+                rectangles.unshift(rect);
+                drawAll();
+            }
+        }
+
+        document.getElementById('bring-to-front').addEventListener('click', () => {
+            if (contextMenuRect) {
+                bringToFront(contextMenuRect);
+            }
+        });
+
+        document.getElementById('send-to-back').addEventListener('click', () => {
+            if (contextMenuRect) {
+                sendToBack(contextMenuRect);
             }
         });
     </script>
