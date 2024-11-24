@@ -151,6 +151,12 @@
         .selected {
             border: 2px dashed yellow;
         }
+        .selection-rectangle {
+            position: absolute;
+            border: 1px dashed #000;
+            background-color: rgba(0, 0, 255, 0.1);
+            pointer-events: none;
+        }
     </style>
 </head>
 <body>
@@ -178,7 +184,8 @@
             <input type="file" id="load-file" style="display: none" onchange="loadFromFile(event)">
             <button onclick="document.getElementById('load-file').click()">Load Design</button>
         </div>
-        <button onclick="saveAsPNG()">Save as PNG</button>
+        <button onclick="saveAsPNG()">Export to PNG</button>
+        <button onclick="saveAsSVG()">Export to SVG</button>
     </div>
     <canvas id="canvas" width="800" height="600"></canvas>
     <div id="context-menu">
@@ -196,6 +203,7 @@
         <div class="context-menu-item" id="group-items">Group Items</div>
     </div>
     <div id="snap-indicator" class="snap-indicator"></div>
+    <div id="selection-rectangle" class="selection-rectangle" style="display: none;"></div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
     <script>
         function toggleTheme() {
@@ -226,6 +234,9 @@
         let isMoving = false;
         let actionHistory = [];
         let selectedRects = [];
+        let selectionStartX = 0;
+        let selectionStartY = 0;
+        let isSelecting = false;
 
         function saveAction() {
             actionHistory.push(JSON.stringify(rectangles));
@@ -549,6 +560,15 @@
                 dragOffsetY = y;
             } else {
                 selectedRects = [];
+                isSelecting = true;
+                selectionStartX = x;
+                selectionStartY = y;
+                const selectionRectangle = document.getElementById('selection-rectangle');
+                selectionRectangle.style.left = `${x}px`;
+                selectionRectangle.style.top = `${y}px`;
+                selectionRectangle.style.width = '0px';
+                selectionRectangle.style.height = '0px';
+                selectionRectangle.style.display = 'block';
             }
 
             drawAll();
@@ -572,13 +592,43 @@
                 dragOffsetY = y;
 
                 drawAll();
+            } else if (isSelecting) {
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+
+                const selectionRectangle = document.getElementById('selection-rectangle');
+                selectionRectangle.style.left = `${Math.min(x, selectionStartX)}px`;
+                selectionRectangle.style.top = `${Math.min(y, selectionStartY)}px`;
+                selectionRectangle.style.width = `${Math.abs(x - selectionStartX)}px`;
+                selectionRectangle.style.height = `${Math.abs(y - selectionStartY)}px`;
             }
         });
 
         canvas.addEventListener('mouseup', () => {
-            isDragging = false;
-            selectedRect = null;
-            showSnapIndicator(null);
+            if (isSelecting) {
+                const selectionRectangle = document.getElementById('selection-rectangle');
+                const rect = selectionRectangle.getBoundingClientRect();
+                const canvasRect = canvas.getBoundingClientRect();
+
+                const selectionX = rect.left - canvasRect.left;
+                const selectionY = rect.top - canvasRect.top;
+                const selectionWidth = rect.width;
+                const selectionHeight = rect.height;
+
+                selectedRects = rectangles.filter(r => 
+                    r.x >= selectionX && r.x + r.width <= selectionX + selectionWidth &&
+                    r.y >= selectionY && r.y + r.height <= selectionY + selectionHeight
+                );
+
+                selectionRectangle.style.display = 'none';
+                isSelecting = false;
+                drawAll();
+            } else {
+                isDragging = false;
+                selectedRect = null;
+                showSnapIndicator(null);
+            }
         });
 
         canvas.addEventListener('contextmenu', e => {
@@ -694,6 +744,51 @@
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
+        }
+
+        function saveAsSVG() {
+            const svgNS = "http://www.w3.org/2000/svg";
+            const svg = document.createElementNS(svgNS, "svg");
+            svg.setAttribute("width", canvas.width);
+            svg.setAttribute("height", canvas.height);
+            svg.setAttribute("viewBox", `0 0 ${canvas.width} ${canvas.height}`);
+
+            rectangles.forEach(rect => {
+                const rectElement = document.createElementNS(svgNS, "rect");
+                rectElement.setAttribute("x", rect.x);
+                rectElement.setAttribute("y", rect.y);
+                rectElement.setAttribute("width", rect.width);
+                rectElement.setAttribute("height", rect.height);
+                rectElement.setAttribute("fill", rect.color);
+                if (rect.rotation) {
+                    rectElement.setAttribute("transform", `rotate(${rect.rotation}, ${rect.x + rect.width / 2}, ${rect.y + rect.height / 2})`);
+                }
+                svg.appendChild(rectElement);
+
+                if (rect.label) {
+                    const textElement = document.createElementNS(svgNS, "text");
+                    textElement.setAttribute("x", rect.x + rect.width / 2);
+                    textElement.setAttribute("y", rect.y + rect.height / 2);
+                    textElement.setAttribute("text-anchor", "middle");
+                    textElement.setAttribute("dominant-baseline", "middle");
+                    textElement.setAttribute("font-size", "14px");
+                    textElement.setAttribute("fill", "black");
+                    textElement.textContent = rect.label;
+                    svg.appendChild(textElement);
+                }
+            });
+
+            const serializer = new XMLSerializer();
+            const svgString = serializer.serializeToString(svg);
+            const blob = new Blob([svgString], { type: "image/svg+xml" });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'floorplan.svg';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
         }
     </script>
 </body>
