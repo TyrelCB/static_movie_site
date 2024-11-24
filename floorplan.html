@@ -7,14 +7,14 @@
     <style>
         body {
             font-family: 'Arial', sans-serif;
-            background-color: #f4f4f9;
-            color: #333;
+            background-color: var(--background-color);
+            color: var(--text-color);
             margin: 0;
             padding: 20px;
         }
         h1 {
             text-align: center;
-            color: #444;
+            color: var(--heading-color);
         }
         .controls {
             display: flex;
@@ -22,7 +22,7 @@
             flex-wrap: wrap;
             margin-bottom: 20px;
             padding: 10px;
-            background-color: #fff;
+            background-color: var(--control-background);
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
@@ -60,11 +60,11 @@
             border-radius: 8px;
             display: block;
             margin: 0 auto;
-            background-color: #fff;
+            background-color: var(--canvas-background);
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
         #context-menu {
-            background: #fff;
+            background: var(--control-background);
             border: 1px solid #ccc;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
             border-radius: 4px;
@@ -88,9 +88,39 @@
             transform: translate(-50%, -50%);
             display: none;
         }
+        .theme-switch {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .theme-switch:hover {
+            background-color: #0056b3;
+        }
+        :root {
+            --background-color: #f4f4f9;
+            --text-color: #333;
+            --heading-color: #444;
+            --control-background: #fff;
+            --canvas-background: #fff;
+        }
+        .dark-theme {
+            --background-color: #333;
+            --text-color: #f4f4f9;
+            --heading-color: #ddd;
+            --control-background: #444;
+            --canvas-background: #555;
+        }
     </style>
 </head>
 <body>
+    <button class="theme-switch" onclick="toggleTheme()">Switch Theme</button>
     <h1>Floorplan Designer</h1>
     <div class="controls">
         <div class="measurement-group">
@@ -108,11 +138,12 @@
             <input type="text" id="shape-label" placeholder="Room name">
         </div>
         <div class="measurement-group">
+            <button onclick="addRectangle()">Add Rectangle</button>
             <button onclick="saveToFile()">Save Design</button>
             <input type="file" id="load-file" style="display: none" onchange="loadFromFile(event)">
             <button onclick="document.getElementById('load-file').click()">Load Design</button>
         </div>
-        <button onclick="addRectangle()">Add Rectangle</button>
+        
     </div>
     <canvas id="canvas" width="800" height="600"></canvas>
     <div id="context-menu">
@@ -130,6 +161,10 @@
     <div id="snap-indicator" class="snap-indicator"></div>
 
     <script>
+        function toggleTheme() {
+            document.body.classList.toggle('dark-theme');
+        }
+
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
         const PADDING = 50; // Padding around elements
