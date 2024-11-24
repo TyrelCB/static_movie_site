@@ -201,6 +201,7 @@
         <div class="context-menu-item" id="bring-to-front">Bring to Front</div>
         <div class="context-menu-item" id="send-to-back">Send to Back</div>
         <div class="context-menu-item" id="group-items">Group Items</div>
+        <div class="context-menu-item" id="resize">Resize</div>
     </div>
     <div id="snap-indicator" class="snap-indicator"></div>
     <div id="selection-rectangle" class="selection-rectangle" style="display: none;"></div>
@@ -758,6 +759,23 @@
                         rectangles.unshift(rect);
                     }
                 });
+            }
+        });
+
+        document.getElementById('resize').addEventListener('click', () => {
+            if (selectedRects.length > 0) {
+                const widthFeet = prompt('Enter new width (feet):', '0');
+                const widthInches = prompt('Enter new width (inches):', '0');
+                const heightFeet = prompt('Enter new height (feet):', '0');
+                const heightInches = prompt('Enter new height (inches):', '0');
+                if (widthFeet !== null && widthInches !== null && heightFeet !== null && heightInches !== null) {
+                    const widthPx = feetInchesToPixels(parseInt(widthFeet), parseInt(widthInches));
+                    const heightPx = feetInchesToPixels(parseInt(heightFeet), parseInt(heightInches));
+                    applyToSelectedRects(rect => {
+                        rect.width = widthPx;
+                        rect.height = heightPx;
+                    });
+                }
             }
         });
 
