@@ -448,13 +448,13 @@
         function getSnapPoints(rect) {
             return [
                 { x: rect.x, y: rect.y }, // top-left
-                { x: rect.x + rect.width/2, y: rect.y }, // top-middle
+                { x: rect.x + rect.width / 2, y: rect.y }, // top-middle
                 { x: rect.x + rect.width, y: rect.y }, // top-right
-                { x: rect.x + rect.width, y: rect.y + rect.height/2 }, // right-middle
+                { x: rect.x + rect.width, y: rect.y + rect.height / 2 }, // right-middle
                 { x: rect.x + rect.width, y: rect.y + rect.height }, // bottom-right
-                { x: rect.x + rect.width/2, y: rect.y + rect.height }, // bottom-middle
+                { x: rect.x + rect.width / 2, y: rect.y + rect.height }, // bottom-middle
                 { x: rect.x, y: rect.y + rect.height }, // bottom-left
-                { x: rect.x, y: rect.y + rect.height/2 } // left-middle
+                { x: rect.x, y: rect.y + rect.height / 2 } // left-middle
             ];
         }
 
@@ -590,6 +590,19 @@
 
                 dragOffsetX = x;
                 dragOffsetY = y;
+
+                const { snapPoint, targetPoint } = findNearestSnapPoint(selectedRects[0], rectangles);
+                if (snapPoint && targetPoint) {
+                    const snapDeltaX = snapPoint.x - targetPoint.x;
+                    const snapDeltaY = snapPoint.y - targetPoint.y;
+                    selectedRects.forEach(rect => {
+                        rect.x += snapDeltaX;
+                        rect.y += snapDeltaY;
+                    });
+                    showSnapIndicator(snapPoint);
+                } else {
+                    showSnapIndicator(null);
+                }
 
                 drawAll();
             } else if (isSelecting) {
