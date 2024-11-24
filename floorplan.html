@@ -148,6 +148,9 @@
                 padding: 8px;
             }
         }
+        .selected {
+            border: 2px dashed yellow;
+        }
     </style>
 </head>
 <body>
@@ -175,7 +178,8 @@
             <input type="file" id="load-file" style="display: none" onchange="loadFromFile(event)">
             <button onclick="document.getElementById('load-file').click()">Load Design</button>
         </div>
-        
+        <button onclick="saveAsPDF()">Save as PDF</button>
+        <button onclick="saveAsPNG()">Save as PNG</button>
     </div>
     <canvas id="canvas" width="800" height="600"></canvas>
     <div id="context-menu">
@@ -194,6 +198,7 @@
     </div>
     <div id="snap-indicator" class="snap-indicator"></div>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
     <script>
         function toggleTheme() {
             document.body.classList.toggle('dark-theme');
@@ -222,6 +227,7 @@
         let showDimensions = true;
         let isMoving = false;
         let actionHistory = [];
+        let selectedRects = [];
 
         function saveAction() {
             actionHistory.push(JSON.stringify(rectangles));
@@ -336,6 +342,14 @@
                     ctx.fillText(rect.label,
                         rect.x + (rect.width - labelWidth) / 2,
                         rect.y + rect.height / 2);
+                }
+
+                // Draw selection border
+                if (selectedRects.includes(rect)) {
+                    ctx.strokeStyle = 'yellow';
+                    ctx.setLineDash([5, 5]);
+                    ctx.strokeRect(rect.x, rect.y, rect.width, rect.height);
+                    ctx.setLineDash([]);
                 }
             });
         }
@@ -479,14 +493,32 @@
             const x = e.clientX - rect.left;
             const y = e.clientY - rect.top;
 
+            let clickedRect = null;
             rectangles.forEach(r => {
                 if (isInside(x, y, r)) {
-                    selectedRect = r;
-                    isDragging = true;
-                    dragOffsetX = x - r.x;
-                    dragOffsetY = y - r.y;
+                    clickedRect = r;
                 }
             });
+
+            if (clickedRect) {
+                if (e.ctrlKey) {
+                    if (selectedRects.includes(clickedRect)) {
+                        selectedRects = selectedRects.filter(r => r !== clickedRect);
+                    } else {
+                        selectedRects.push(clickedRect);
+                    }
+                } else {
+                    selectedRects = [clickedRect];
+                }
+                selectedRect = clickedRect;
+                isDragging = true;
+                dragOffsetX = x - clickedRect.x;
+                dragOffsetY = y - clickedRect.y;
+            } else {
+                selectedRects = [];
+            }
+
+            drawAll();
         });
 
         canvas.addEventListener('mousemove', e => {
@@ -648,6 +680,26 @@
                 sendToBack(contextMenuRect);
             }
         });
+
+        function saveAsPDF() {
+            const { jsPDF } = window.jspdf;
+            const pdf = new jsPDF({
+                orientation: 'landscape',
+                unit: 'px',
+                format: [canvas.width, canvas.height]
+            });
+            pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, canvas.width, canvas.height);
+            pdf.save('floorplan.pdf');
+        }
+
+        function saveAsPNG() {
+            const link = document.createElement('a');
+            link.href = canvas.toDataURL('image/png');
+            link.download = 'floorplan.png';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
     </script>
 </body>
 </html>
