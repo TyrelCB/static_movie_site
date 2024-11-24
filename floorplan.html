@@ -33,6 +33,16 @@
         .context-menu-item:hover {
             background: #f0f0f0;
         }
+        .snap-indicator {
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            background: #ff0000;
+            border-radius: 50%;
+            pointer-events: none;
+            transform: translate(-50%, -50%);
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -52,6 +62,11 @@
             <label>Label:</label>
             <input type="text" id="shape-label" placeholder="Room name">
         </div>
+        <div class="measurement-group">
+            <button onclick="saveToFile()">Save Design</button>
+            <input type="file" id="load-file" style="display: none" onchange="loadFromFile(event)">
+            <button onclick="document.getElementById('load-file').click()">Load Design</button>
+        </div>
         <button onclick="addRectangle()">Add Rectangle</button>
     </div>
     <canvas id="canvas" width="800" height="600"></canvas>
@@ -59,11 +74,13 @@
         <div class="context-menu-item" id="edit-label">Edit Label</div>
         <div class="context-menu-item" id="duplicate">Duplicate</div>
         <div class="context-menu-item" id="delete">Delete</div>
-        <div class="context-menu-item" id="rotate">Rotate 90°</div>
+        <div class="context-menu-item" id="rotate90">Rotate 90°</div>
+        <div class="context-menu-item" id="rotate-custom">Custom Rotation...</div>
         <div class="context-menu-item">
             Color: <input type="color" id="color-picker">
         </div>
     </div>
+    <div id="snap-indicator" class="snap-indicator"></div>
 
     <script>
         const canvas = document.getElementById('canvas');
@@ -84,6 +101,8 @@
         let dragOffsetX = 0;
         let dragOffsetY = 0;
         let contextMenuRect = null;
+        const SNAP_THRESHOLD = 10; // pixels
+        let snapIndicator = document.getElementById('snap-indicator');
 
         function feetInchesToPixels(feet, inches) {
             // Using 1 foot = 20 pixels for scale
@@ -114,7 +133,8 @@
                 width: widthPx,
                 height: heightPx,
                 label: label,
-                color: COLORS[colorIndex]
+                color: COLORS[colorIndex],
+                rotation: 0
             });
 
             // Cycle to next color
@@ -217,9 +237,93 @@
             }
         }
 
-        function rotateShape(rect) {
-            [rect.width, rect.height] = [rect.height, rect.width];
+        function rotateShape(rect, degrees) {
+            if (degrees === 90) {
+                [rect.width, rect.height] = [rect.height, rect.width];
+            }
+            rect.rotation = (rect.rotation || 0) + degrees;
             drawAll();
+        }
+
+        function saveToFile() {
+            const data = JSON.stringify(rectangles, null, 2);
+            const blob = new Blob([data], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'floorplan.json';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        }
+
+        function loadFromFile(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        rectangles = JSON.parse(e.target.result);
+                        drawAll();
+                        // Reset color index based on loaded rectangles
+                        colorIndex = rectangles.length % COLORS.length;
+                    } catch (error) {
+                        alert('Error loading file: Invalid format');
+                    }
+                };
+                reader.readAsText(file);
+            }
+        }
+
+        function getSnapPoints(rect) {
+            return [
+                { x: rect.x, y: rect.y }, // top-left
+                { x: rect.x + rect.width/2, y: rect.y }, // top-middle
+                { x: rect.x + rect.width, y: rect.y }, // top-right
+                { x: rect.x + rect.width, y: rect.y + rect.height/2 }, // right-middle
+                { x: rect.x + rect.width, y: rect.y + rect.height }, // bottom-right
+                { x: rect.x + rect.width/2, y: rect.y + rect.height }, // bottom-middle
+                { x: rect.x, y: rect.y + rect.height }, // bottom-left
+                { x: rect.x, y: rect.y + rect.height/2 } // left-middle
+            ];
+        }
+
+        function findNearestSnapPoint(rect, otherRects) {
+            let minDist = Infinity;
+            let snapPoint = null;
+            let targetPoint = null;
+
+            const movingPoints = getSnapPoints(rect);
+            
+            otherRects.forEach(other => {
+                if (other === rect) return;
+                
+                const otherPoints = getSnapPoints(other);
+                
+                movingPoints.forEach(p1 => {
+                    otherPoints.forEach(p2 => {
+                        const dist = Math.hypot(p1.x - p2.x, p1.y - p2.y);
+                        if (dist < SNAP_THRESHOLD && dist < minDist) {
+                            minDist = dist;
+                            snapPoint = p2;
+                            targetPoint = p1;
+                        }
+                    });
+                });
+            });
+
+            return { snapPoint, targetPoint };
+        }
+
+        function showSnapIndicator(point) {
+            if (!point) {
+                snapIndicator.style.display = 'none';
+                return;
+            }
+            snapIndicator.style.display = 'block';
+            snapIndicator.style.left = point.x + 'px';
+            snapIndicator.style.top = point.y + 'px';
         }
 
         canvas.addEventListener('mousedown', e => {
@@ -243,8 +347,31 @@
                 const x = e.clientX - rect.left;
                 const y = e.clientY - rect.top;
                 
-                selectedRect.x = Math.max(0, x - dragOffsetX);
-                selectedRect.y = Math.max(0, y - dragOffsetY);
+                // Calculate new position without snapping
+                const newX = Math.max(0, x - dragOffsetX);
+                const newY = Math.max(0, y - dragOffsetY);
+                
+                // Create temporary rectangle for snap calculation
+                const tempRect = {
+                    ...selectedRect,
+                    x: newX,
+                    y: newY
+                };
+
+                // Find nearest snap point
+                const { snapPoint, targetPoint } = findNearestSnapPoint(tempRect, rectangles);
+
+                if (snapPoint && targetPoint) {
+                    // Apply snap offset
+                    selectedRect.x = newX + (snapPoint.x - targetPoint.x);
+                    selectedRect.y = newY + (snapPoint.y - targetPoint.y);
+                    showSnapIndicator(snapPoint);
+                } else {
+                    selectedRect.x = newX;
+                    selectedRect.y = newY;
+                    showSnapIndicator(null);
+                }
+                
                 drawAll();
             }
         });
@@ -252,6 +379,7 @@
         canvas.addEventListener('mouseup', () => {
             isDragging = false;
             selectedRect = null;
+            showSnapIndicator(null);
         });
 
         canvas.addEventListener('contextmenu', e => {
@@ -292,9 +420,21 @@
             }
         });
 
-        document.getElementById('rotate').addEventListener('click', () => {
+        document.getElementById('rotate90').addEventListener('click', () => {
             if (contextMenuRect) {
-                rotateShape(contextMenuRect);
+                rotateShape(contextMenuRect, 90);
+            }
+        });
+
+        document.getElementById('rotate-custom').addEventListener('click', () => {
+            if (contextMenuRect) {
+                const degrees = prompt('Enter rotation angle in degrees:', '45');
+                if (degrees !== null) {
+                    const angle = parseFloat(degrees);
+                    if (!isNaN(angle)) {
+                        rotateShape(contextMenuRect, angle);
+                    }
+                }
             }
         });
 
