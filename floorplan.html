@@ -564,8 +564,8 @@
                 selectionStartX = x;
                 selectionStartY = y;
                 const selectionRectangle = document.getElementById('selection-rectangle');
-                selectionRectangle.style.left = `${x}px`;
-                selectionRectangle.style.top = `${y}px`;
+                selectionRectangle.style.left = `${rect.left + x}px`;
+                selectionRectangle.style.top = `${rect.top + y}px`;
                 selectionRectangle.style.width = '0px';
                 selectionRectangle.style.height = '0px';
                 selectionRectangle.style.display = 'block';
@@ -598,8 +598,8 @@
                 const y = e.clientY - rect.top;
 
                 const selectionRectangle = document.getElementById('selection-rectangle');
-                selectionRectangle.style.left = `${Math.min(x, selectionStartX)}px`;
-                selectionRectangle.style.top = `${Math.min(y, selectionStartY)}px`;
+                selectionRectangle.style.left = `${rect.left + Math.min(x, selectionStartX)}px`;
+                selectionRectangle.style.top = `${rect.top + Math.min(y, selectionStartY)}px`;
                 selectionRectangle.style.width = `${Math.abs(x - selectionStartX)}px`;
                 selectionRectangle.style.height = `${Math.abs(y - selectionStartY)}px`;
             }
