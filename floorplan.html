@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Floorplan Designer</title>
+    <style>
+        #canvas {
+            border: 1px solid black;
+        }
+        .controls {
+            margin-bottom: 10px;
+        }
+        .measurement-group {
+            display: inline-block;
+            margin-right: 15px;
+        }
+        .measurement-group input {
+            width: 60px;
+        }
+        #context-menu {
+            position: fixed;
+            background: white;
+            border: 1px solid #ccc;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
+            display: none;
+            z-index: 1000;
+        }
+        .context-menu-item {
+            padding: 8px 12px;
+            cursor: pointer;
+        }
+        .context-menu-item:hover {
+            background: #f0f0f0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Floorplan Designer</h1>
+    <div class="controls">
+        <div class="measurement-group">
+            <label>Width:</label>
+            <input type="number" id="width-feet" value="0"> ft
+            <input type="number" id="width-inches" value="0" min="0" max="11"> in
+        </div>
+        <div class="measurement-group">
+            <label>Height:</label>
+            <input type="number" id="height-feet" value="0"> ft
+            <input type="number" id="height-inches" value="0" min="0" max="11"> in
+        </div>
+        <div class="measurement-group">
+            <label>Label:</label>
+            <input type="text" id="shape-label" placeholder="Room name">
+        </div>
+        <button onclick="addRectangle()">Add Rectangle</button>
+    </div>
+    <canvas id="canvas" width="800" height="600"></canvas>
+    <div id="context-menu">
+        <div class="context-menu-item" id="edit-label">Edit Label</div>
+        <div class="context-menu-item" id="duplicate">Duplicate</div>
+        <div class="context-menu-item" id="delete">Delete</div>
+        <div class="context-menu-item" id="rotate">Rotate 90°</div>
+        <div class="context-menu-item">
+            Color: <input type="color" id="color-picker">
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const PADDING = 50; // Padding around elements
+        const COLORS = [
+            'rgba(0, 0, 255, 0.5)',   // blue
+            'rgba(255, 0, 0, 0.5)',   // red
+            'rgba(0, 255, 0, 0.5)',   // green
+            'rgba(255, 165, 0, 0.5)', // orange
+            'rgba(128, 0, 128, 0.5)'  // purple
+        ];
+        let colorIndex = 0;
+        
+        let rectangles = [];
+        let isDragging = false;
+        let selectedRect = null;
+        let dragOffsetX = 0;
+        let dragOffsetY = 0;
+        let contextMenuRect = null;
+
+        function feetInchesToPixels(feet, inches) {
+            // Using 1 foot = 20 pixels for scale
+            return (feet * 12 + inches) * (20/12);
+        }
+
+        function pixelsToFeetInches(pixels) {
+            // Convert pixels back to feet/inches (inverse of feetInchesToPixels)
+            const totalInches = (pixels * 12) / 20;
+            const feet = Math.floor(totalInches / 12);
+            const inches = Math.round(totalInches % 12);
+            return `${feet}'${inches}"`;
+        }
+
+        function addRectangle() {
+            const widthFeet = parseInt(document.getElementById('width-feet').value) || 0;
+            const widthInches = parseInt(document.getElementById('width-inches').value) || 0;
+            const heightFeet = parseInt(document.getElementById('height-feet').value) || 0;
+            const heightInches = parseInt(document.getElementById('height-inches').value) || 0;
+            const label = document.getElementById('shape-label').value;
+
+            const widthPx = feetInchesToPixels(widthFeet, widthInches);
+            const heightPx = feetInchesToPixels(heightFeet, heightInches);
+
+            rectangles.push({
+                x: 50,
+                y: 50,
+                width: widthPx,
+                height: heightPx,
+                label: label,
+                color: COLORS[colorIndex]
+            });
+
+            // Cycle to next color
+            colorIndex = (colorIndex + 1) % COLORS.length;
+            
+            drawAll();
+            document.getElementById('shape-label').value = ''; // Clear label input
+        }
+
+        function updateCanvasSize() {
+            let maxX = PADDING;
+            let maxY = PADDING;
+            
+            rectangles.forEach(rect => {
+                maxX = Math.max(maxX, rect.x + rect.width + PADDING);
+                maxY = Math.max(maxY, rect.y + rect.height + PADDING);
+            });
+
+            canvas.width = Math.max(800, maxX);  // Minimum width of 800
+            canvas.height = Math.max(600, maxY); // Minimum height of 600
+        }
+
+        function drawAll() {
+            updateCanvasSize();
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            rectangles.forEach(rect => {
+                // Draw rectangle with its color
+                ctx.fillStyle = rect.color;
+                
+                // Draw rectangle
+                ctx.save();
+                ctx.translate(rect.x + rect.width/2, rect.y + rect.height/2);
+                if (rect.rotation) {
+                    ctx.rotate(rect.rotation * Math.PI / 180);
+                }
+                ctx.fillRect(-rect.width/2, -rect.height/2, rect.width, rect.height);
+                ctx.restore();
+                
+                // Draw dimension labels
+                ctx.fillStyle = 'black';
+                ctx.font = '12px Arial';
+                
+                // Width label
+                const widthText = pixelsToFeetInches(rect.width);
+                const widthTextWidth = ctx.measureText(widthText).width;
+                ctx.fillText(widthText, 
+                    rect.x + (rect.width - widthTextWidth) / 2,
+                    rect.y - 5);
+                
+                // Height label
+                const heightText = pixelsToFeetInches(rect.height);
+                ctx.save();
+                ctx.translate(rect.x - 5, rect.y + (rect.height + ctx.measureText(heightText).width) / 2);
+                ctx.rotate(-Math.PI / 2);
+                ctx.fillText(heightText, 0, 0);
+                ctx.restore();
+
+                // Custom label
+                if (rect.label) {
+                    ctx.font = '14px Arial';
+                    const labelWidth = ctx.measureText(rect.label).width;
+                    ctx.fillText(rect.label,
+                        rect.x + (rect.width - labelWidth) / 2,
+                        rect.y + rect.height / 2);
+                }
+            });
+        }
+
+        function isInside(x, y, rect) {
+            return x >= rect.x && x <= rect.x + rect.width &&
+                   y >= rect.y && y <= rect.y + rect.height;
+        }
+
+        function showContextMenu(x, y) {
+            const menu = document.getElementById('context-menu');
+            menu.style.display = 'block';
+            menu.style.left = x + 'px';
+            menu.style.top = y + 'px';
+        }
+
+        function hideContextMenu() {
+            document.getElementById('context-menu').style.display = 'none';
+        }
+
+        function duplicateShape(rect) {
+            rectangles.push({
+                ...rect,
+                x: rect.x + 20,
+                y: rect.y + 20
+            });
+            drawAll();
+        }
+
+        function deleteShape(rect) {
+            const index = rectangles.indexOf(rect);
+            if (index > -1) {
+                rectangles.splice(index, 1);
+                drawAll();
+            }
+        }
+
+        function rotateShape(rect) {
+            [rect.width, rect.height] = [rect.height, rect.width];
+            drawAll();
+        }
+
+        canvas.addEventListener('mousedown', e => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            rectangles.forEach(r => {
+                if (isInside(x, y, r)) {
+                    selectedRect = r;
+                    isDragging = true;
+                    dragOffsetX = x - r.x;
+                    dragOffsetY = y - r.y;
+                }
+            });
+        });
+
+        canvas.addEventListener('mousemove', e => {
+            if (isDragging && selectedRect) {
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                selectedRect.x = Math.max(0, x - dragOffsetX);
+                selectedRect.y = Math.max(0, y - dragOffsetY);
+                drawAll();
+            }
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            isDragging = false;
+            selectedRect = null;
+        });
+
+        canvas.addEventListener('contextmenu', e => {
+            e.preventDefault();
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            rectangles.forEach(r => {
+                if (isInside(x, y, r)) {
+                    contextMenuRect = r;
+                    showContextMenu(e.clientX, e.clientY);
+                }
+            });
+        });
+
+        document.addEventListener('click', hideContextMenu);
+
+        document.getElementById('edit-label').addEventListener('click', () => {
+            if (contextMenuRect) {
+                const newLabel = prompt('Enter new label:', contextMenuRect.label || '');
+                if (newLabel !== null) {
+                    contextMenuRect.label = newLabel;
+                    drawAll();
+                }
+            }
+        });
+
+        document.getElementById('duplicate').addEventListener('click', () => {
+            if (contextMenuRect) {
+                duplicateShape(contextMenuRect);
+            }
+        });
+
+        document.getElementById('delete').addEventListener('click', () => {
+            if (contextMenuRect) {
+                deleteShape(contextMenuRect);
+            }
+        });
+
+        document.getElementById('rotate').addEventListener('click', () => {
+            if (contextMenuRect) {
+                rotateShape(contextMenuRect);
+            }
+        });
+
+        document.getElementById('color-picker').addEventListener('input', (e) => {
+            if (contextMenuRect) {
+                contextMenuRect.color = e.target.value + '80'; // Add 50% transparency
+                drawAll();
+            }
+        });
+    </script>
+</body>
+</html>
