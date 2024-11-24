@@ -178,7 +178,6 @@
             <input type="file" id="load-file" style="display: none" onchange="loadFromFile(event)">
             <button onclick="document.getElementById('load-file').click()">Load Design</button>
         </div>
-        <button onclick="saveAsPDF()">Save as PDF</button>
         <button onclick="saveAsPNG()">Save as PNG</button>
     </div>
     <canvas id="canvas" width="800" height="600"></canvas>
@@ -186,7 +185,6 @@
         <div class="context-menu-item" id="edit-label">Edit Label</div>
         <div class="context-menu-item" id="duplicate">Duplicate</div>
         <div class="context-menu-item" id="delete">Delete</div>
-        <div class="context-menu-item" id="rotate90">Rotate 90°</div>
         <div class="context-menu-item" id="rotate-custom">Custom Rotation...</div>
         <div class="context-menu-item">
             Color: <input type="color" id="color-picker">
@@ -195,9 +193,9 @@
         <div class="context-menu-item" id="move-shape">Move Shape</div>
         <div class="context-menu-item" id="bring-to-front">Bring to Front</div>
         <div class="context-menu-item" id="send-to-back">Send to Back</div>
+        <div class="context-menu-item" id="group-items">Group Items</div>
     </div>
     <div id="snap-indicator" class="snap-indicator"></div>
-
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
     <script>
         function toggleTheme() {
@@ -512,8 +510,8 @@
                 }
                 selectedRect = clickedRect;
                 isDragging = true;
-                dragOffsetX = x - clickedRect.x;
-                dragOffsetY = y - clickedRect.y;
+                dragOffsetX = x;
+                dragOffsetY = y;
             } else {
                 selectedRects = [];
             }
@@ -522,38 +520,22 @@
         });
 
         canvas.addEventListener('mousemove', e => {
-            if ((isDragging && selectedRect) || (isMoving && contextMenuRect)) {
+            if (isDragging && selectedRects.length > 0) {
                 const rect = canvas.getBoundingClientRect();
                 const x = e.clientX - rect.left;
                 const y = e.clientY - rect.top;
-                
-                const targetRect = isMoving ? contextMenuRect : selectedRect;
-                
-                // Calculate new position without snapping
-                const newX = Math.max(0, x - dragOffsetX);
-                const newY = Math.max(0, y - dragOffsetY);
-                
-                // Create temporary rectangle for snap calculation
-                const tempRect = {
-                    ...targetRect,
-                    x: newX,
-                    y: newY
-                };
 
-                // Find nearest snap point
-                const { snapPoint, targetPoint } = findNearestSnapPoint(tempRect, rectangles);
+                const deltaX = x - dragOffsetX;
+                const deltaY = y - dragOffsetY;
 
-                if (snapPoint && targetPoint) {
-                    // Apply snap offset
-                    targetRect.x = newX + (snapPoint.x - targetPoint.x);
-                    targetRect.y = newY + (snapPoint.y - targetPoint.y);
-                    showSnapIndicator(snapPoint);
-                } else {
-                    targetRect.x = newX;
-                    targetRect.y = newY;
-                    showSnapIndicator(null);
-                }
-                
+                selectedRects.forEach(rect => {
+                    rect.x += deltaX;
+                    rect.y += deltaY;
+                });
+
+                dragOffsetX = x;
+                dragOffsetY = y;
+
                 drawAll();
             }
         });
@@ -561,11 +543,6 @@
         canvas.addEventListener('mouseup', () => {
             isDragging = false;
             selectedRect = null;
-            if (isMoving) {
-                isMoving = false;
-                contextMenuRect = null;
-                canvas.style.cursor = 'default';
-            }
             showSnapIndicator(null);
         });
 
@@ -605,12 +582,6 @@
         document.getElementById('delete').addEventListener('click', () => {
             if (contextMenuRect) {
                 deleteShape(contextMenuRect);
-            }
-        });
-
-        document.getElementById('rotate90').addEventListener('click', () => {
-            if (contextMenuRect) {
-                rotateShape(contextMenuRect, 90);
             }
         });
 
@@ -680,17 +651,6 @@
                 sendToBack(contextMenuRect);
             }
         });
-
-        function saveAsPDF() {
-            const { jsPDF } = window.jspdf;
-            const pdf = new jsPDF({
-                orientation: 'landscape',
-                unit: 'px',
-                format: [canvas.width, canvas.height]
-            });
-            pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, canvas.width, canvas.height);
-            pdf.save('floorplan.pdf');
-        }
 
         function saveAsPNG() {
             const link = document.createElement('a');
