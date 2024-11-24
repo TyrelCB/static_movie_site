@@ -647,46 +647,65 @@
 
         document.addEventListener('click', hideContextMenu);
 
+        function applyToSelectedRects(action) {
+            saveAction();
+            selectedRects.forEach(action);
+            drawAll();
+        }
+
         document.getElementById('edit-label').addEventListener('click', () => {
-            if (contextMenuRect) {
-                saveAction();
-                const newLabel = prompt('Enter new label:', contextMenuRect.label || '');
+            if (selectedRects.length > 0) {
+                const newLabel = prompt('Enter new label:', selectedRects[0].label || '');
                 if (newLabel !== null) {
-                    contextMenuRect.label = newLabel;
-                    drawAll();
+                    applyToSelectedRects(rect => rect.label = newLabel);
                 }
             }
         });
 
         document.getElementById('duplicate').addEventListener('click', () => {
-            if (contextMenuRect) {
-                duplicateShape(contextMenuRect);
+            if (selectedRects.length > 0) {
+                applyToSelectedRects(rect => {
+                    rectangles.push({
+                        ...rect,
+                        x: rect.x + 20,
+                        y: rect.y + 20
+                    });
+                });
             }
         });
 
         document.getElementById('delete').addEventListener('click', () => {
-            if (contextMenuRect) {
-                deleteShape(contextMenuRect);
+            if (selectedRects.length > 0) {
+                applyToSelectedRects(rect => {
+                    const index = rectangles.indexOf(rect);
+                    if (index > -1) {
+                        rectangles.splice(index, 1);
+                    }
+                });
+                selectedRects = [];
             }
         });
 
         document.getElementById('rotate-custom').addEventListener('click', () => {
-            if (contextMenuRect) {
+            if (selectedRects.length > 0) {
                 const degrees = prompt('Enter rotation angle in degrees:', '45');
                 if (degrees !== null) {
                     const angle = parseFloat(degrees);
                     if (!isNaN(angle)) {
-                        rotateShape(contextMenuRect, angle);
+                        applyToSelectedRects(rect => {
+                            if (angle === 90) {
+                                [rect.width, rect.height] = [rect.height, rect.width];
+                            }
+                            rect.rotation = (rect.rotation || 0) + angle;
+                        });
                     }
                 }
             }
         });
 
         document.getElementById('color-picker').addEventListener('input', (e) => {
-            if (contextMenuRect) {
-                saveAction();
-                contextMenuRect.color = e.target.value + '80'; // Add 50% transparency
-                drawAll();
+            if (selectedRects.length > 0) {
+                applyToSelectedRects(rect => rect.color = e.target.value + '80'); // Add 50% transparency
             }
         });
 
@@ -697,11 +716,35 @@
         });
 
         document.getElementById('move-shape').addEventListener('click', () => {
-            if (contextMenuRect) {
+            if (selectedRects.length > 0) {
                 saveAction();
                 isMoving = true;
                 hideContextMenu();
                 canvas.style.cursor = 'move';
+            }
+        });
+
+        document.getElementById('bring-to-front').addEventListener('click', () => {
+            if (selectedRects.length > 0) {
+                applyToSelectedRects(rect => {
+                    const index = rectangles.indexOf(rect);
+                    if (index > -1) {
+                        rectangles.splice(index, 1);
+                        rectangles.push(rect);
+                    }
+                });
+            }
+        });
+
+        document.getElementById('send-to-back').addEventListener('click', () => {
+            if (selectedRects.length > 0) {
+                applyToSelectedRects(rect => {
+                    const index = rectangles.indexOf(rect);
+                    if (index > -1) {
+                        rectangles.splice(index, 1);
+                        rectangles.unshift(rect);
+                    }
+                });
             }
         });
 
