@@ -5,38 +5,83 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Floorplan Designer</title>
     <style>
-        #canvas {
-            border: 1px solid black;
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f4f4f9;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+            color: #444;
         }
         .controls {
-            margin-bottom: 10px;
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+            padding: 10px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
         .measurement-group {
-            display: inline-block;
+            display: flex;
+            align-items: center;
             margin-right: 15px;
+            margin-bottom: 10px;
+        }
+        .measurement-group label {
+            margin-right: 5px;
+            font-weight: bold;
         }
         .measurement-group input {
-            width: 60px;
+            width: 70px;
+            padding: 5px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            margin-right: 5px;
+        }
+        .measurement-group button {
+            padding: 5px 10px;
+            border: none;
+            background-color: #007bff;
+            color: white;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .measurement-group button:hover {
+            background-color: #0056b3;
+        }
+        #canvas {
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            display: block;
+            margin: 0 auto;
+            background-color: #fff;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
         #context-menu {
-            position: fixed;
-            background: white;
+            background: #fff;
             border: 1px solid #ccc;
-            box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            border-radius: 4px;
             display: none;
             z-index: 1000;
         }
         .context-menu-item {
-            padding: 8px 12px;
+            padding: 10px 15px;
             cursor: pointer;
+            transition: background-color 0.3s;
         }
         .context-menu-item:hover {
-            background: #f0f0f0;
+            background-color: #f0f0f0;
         }
         .snap-indicator {
-            position: absolute;
-            width: 6px;
-            height: 6px;
+            width: 8px;
+            height: 8px;
             background: #ff0000;
             border-radius: 50%;
             pointer-events: none;
@@ -80,6 +125,7 @@
             Color: <input type="color" id="color-picker">
         </div>
         <div class="context-menu-item" id="toggle-dimensions">Toggle Dimensions</div>
+        <div class="context-menu-item" id="move-shape">Move Shape</div>
     </div>
     <div id="snap-indicator" class="snap-indicator"></div>
 
@@ -105,6 +151,7 @@
         const SNAP_THRESHOLD = 10; // pixels
         let snapIndicator = document.getElementById('snap-indicator');
         let showDimensions = true;
+        let isMoving = false;
 
         function feetInchesToPixels(feet, inches) {
             // Using 1 foot = 20 pixels for scale
@@ -331,7 +378,7 @@
         }
 
         canvas.addEventListener('mousedown', e => {
-            if (e.button === 2) return; // Ignore right-click
+            if (e.button === 2 || isMoving) return; // Ignore right-click or if moving
 
             const rect = canvas.getBoundingClientRect();
             const x = e.clientX - rect.left;
@@ -348,10 +395,12 @@
         });
 
         canvas.addEventListener('mousemove', e => {
-            if (isDragging && selectedRect) {
+            if ((isDragging && selectedRect) || (isMoving && contextMenuRect)) {
                 const rect = canvas.getBoundingClientRect();
                 const x = e.clientX - rect.left;
                 const y = e.clientY - rect.top;
+                
+                const targetRect = isMoving ? contextMenuRect : selectedRect;
                 
                 // Calculate new position without snapping
                 const newX = Math.max(0, x - dragOffsetX);
@@ -359,7 +408,7 @@
                 
                 // Create temporary rectangle for snap calculation
                 const tempRect = {
-                    ...selectedRect,
+                    ...targetRect,
                     x: newX,
                     y: newY
                 };
@@ -369,12 +418,12 @@
 
                 if (snapPoint && targetPoint) {
                     // Apply snap offset
-                    selectedRect.x = newX + (snapPoint.x - targetPoint.x);
-                    selectedRect.y = newY + (snapPoint.y - targetPoint.y);
+                    targetRect.x = newX + (snapPoint.x - targetPoint.x);
+                    targetRect.y = newY + (snapPoint.y - targetPoint.y);
                     showSnapIndicator(snapPoint);
                 } else {
-                    selectedRect.x = newX;
-                    selectedRect.y = newY;
+                    targetRect.x = newX;
+                    targetRect.y = newY;
                     showSnapIndicator(null);
                 }
                 
@@ -385,6 +434,11 @@
         canvas.addEventListener('mouseup', () => {
             isDragging = false;
             selectedRect = null;
+            if (isMoving) {
+                isMoving = false;
+                contextMenuRect = null;
+                canvas.style.cursor = 'default';
+            }
             showSnapIndicator(null);
         });
 
@@ -454,6 +508,14 @@
         document.getElementById('toggle-dimensions').addEventListener('click', () => {
             showDimensions = !showDimensions;
             drawAll();
+        });
+
+        document.getElementById('move-shape').addEventListener('click', () => {
+            if (contextMenuRect) {
+                isMoving = true;
+                hideContextMenu();
+                canvas.style.cursor = 'move';
+            }
         });
     </script>
 </body>
