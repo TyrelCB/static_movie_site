@@ -489,6 +489,9 @@
                 e.preventDefault();
                 selectedRects = [...rectangles];
                 drawAll();
+            } else if (e.ctrlKey && e.key === 'z') {
+                e.preventDefault();
+                undo();
             } else if (selectedRects.length > 0) {
                 let moved = false;
                 switch (e.key) {
