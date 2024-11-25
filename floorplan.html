@@ -157,6 +157,16 @@
             background-color: rgba(0, 0, 255, 0.1);
             pointer-events: none;
         }
+        .tooltip {
+            position: absolute;
+            background-color: #333;
+            color: #fff;
+            padding: 5px;
+            border-radius: 4px;
+            font-size: 12px;
+            display: none;
+            z-index: 1000;
+        }
     </style>
 </head>
 <body>
@@ -205,6 +215,7 @@
     </div>
     <div id="snap-indicator" class="snap-indicator"></div>
     <div id="selection-rectangle" class="selection-rectangle" style="display: none;"></div>
+    <div id="tooltip" class="tooltip"></div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
     <script>
         function toggleTheme() {
@@ -238,6 +249,7 @@
         let selectionStartX = 0;
         let selectionStartY = 0;
         let isSelecting = false;
+        const tooltip = document.getElementById('tooltip');
 
         function saveAction() {
             actionHistory.push(JSON.stringify(rectangles));
@@ -617,6 +629,26 @@
                 selectionRectangle.style.width = `${Math.abs(x - selectionStartX)}px`;
                 selectionRectangle.style.height = `${Math.abs(y - selectionStartY)}px`;
             }
+
+            if (!isDragging && !isSelecting) {
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+
+                let hoveredRect = null;
+                rectangles.forEach(r => {
+                    if (isInside(x, y, r)) {
+                        hoveredRect = r;
+                    }
+                });
+
+                if (hoveredRect) {
+                    const sqFeet = calculateSquareFeet(hoveredRect);
+                    showTooltip(e.clientX + 10, e.clientY + 10, `${sqFeet} sq ft`);
+                } else {
+                    hideTooltip();
+                }
+            }
         });
 
         canvas.addEventListener('mouseup', () => {
@@ -864,6 +896,25 @@
             document.body.removeChild(link);
             URL.revokeObjectURL(url);
         }
+
+        function showTooltip(x, y, text) {
+            tooltip.style.left = x + 'px';
+            tooltip.style.top = y + 'px';
+            tooltip.textContent = text;
+            tooltip.style.display = 'block';
+        }
+
+        function hideTooltip() {
+            tooltip.style.display = 'none';
+        }
+
+        function calculateSquareFeet(rect) {
+            const widthFeet = rect.width / (20 / 12);
+            const heightFeet = rect.height / (20 / 12);
+            return (widthFeet * heightFeet / 144).toFixed(2); // Divide by 144 to convert square inches to square feet
+        }
+
+        canvas.addEventListener('mouseout', hideTooltip);
     </script>
 </body>
 </html>
