@@ -45,6 +45,7 @@
         }
         .measurement-group button {
             padding: 5px 10px;
+            margin: 2px;
             border: none;
             background-color: #007bff;
             color: white;
@@ -643,8 +644,11 @@
                 });
 
                 if (hoveredRect) {
-                    const sqFeet = calculateSquareFeet(hoveredRect);
-                    showTooltip(e.clientX + 10, e.clientY + 10, `${sqFeet} sq ft`);
+                    const tooltipText = formatTooltip(hoveredRect);
+                    showTooltip(e.clientX + 10, e.clientY + 10, tooltipText);
+                } else if (selectedRects.length > 0) {
+                    const totalSqFeet = selectedRects.reduce((sum, rect) => sum + calculateSquareFeet(rect), 0).toFixed(2);
+                    showTooltip(e.clientX + 10, e.clientY + 10, `Total: ${totalSqFeet} sq ft`);
                 } else {
                     hideTooltip();
                 }
@@ -900,7 +904,7 @@
         function showTooltip(x, y, text) {
             tooltip.style.left = x + 'px';
             tooltip.style.top = y + 'px';
-            tooltip.textContent = text;
+            tooltip.innerHTML = text;
             tooltip.style.display = 'block';
         }
 
@@ -911,8 +915,82 @@
         function calculateSquareFeet(rect) {
             const widthFeet = rect.width / (20 / 12);
             const heightFeet = rect.height / (20 / 12);
-            return (widthFeet * heightFeet / 144).toFixed(2); // Divide by 144 to convert square inches to square feet
+            return (widthFeet * heightFeet / 144); // Return as a number for easier summation
         }
+
+        function formatTooltip(rect) {
+            const widthText = pixelsToFeetInches(rect.width);
+            const heightText = pixelsToFeetInches(rect.height);
+            const sqFeet = calculateSquareFeet(rect).toFixed(2);
+            return `${rect.label || 'No Label'}<br>${widthText} x ${heightText}<br>${sqFeet} sq ft`;
+        }
+
+        canvas.addEventListener('mousemove', e => {
+            if (isDragging && selectedRects.length > 0) {
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+
+                const deltaX = x - dragOffsetX;
+                const deltaY = y - dragOffsetY;
+
+                selectedRects.forEach(rect => {
+                    rect.x += deltaX;
+                    rect.y += deltaY;
+                });
+
+                dragOffsetX = x;
+                dragOffsetY = y;
+
+                const { snapPoint, targetPoint } = findNearestSnapPoint(selectedRects[0], rectangles);
+                if (snapPoint && targetPoint) {
+                    const snapDeltaX = snapPoint.x - targetPoint.x;
+                    const snapDeltaY = snapPoint.y - targetPoint.y;
+                    selectedRects.forEach(rect => {
+                        rect.x += snapDeltaX;
+                        rect.y += snapDeltaY;
+                    });
+                    showSnapIndicator(snapPoint);
+                } else {
+                    showSnapIndicator(null);
+                }
+
+                drawAll();
+            } else if (isSelecting) {
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+
+                const selectionRectangle = document.getElementById('selection-rectangle');
+                selectionRectangle.style.left = `${rect.left + Math.min(x, selectionStartX)}px`;
+                selectionRectangle.style.top = `${rect.top + Math.min(y, selectionStartY)}px`;
+                selectionRectangle.style.width = `${Math.abs(x - selectionStartX)}px`;
+                selectionRectangle.style.height = `${Math.abs(y - selectionStartY)}px`;
+            }
+
+            if (!isDragging && !isSelecting) {
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+
+                let hoveredRect = null;
+                rectangles.forEach(r => {
+                    if (isInside(x, y, r)) {
+                        hoveredRect = r;
+                    }
+                });
+
+                if (hoveredRect) {
+                    const tooltipText = formatTooltip(hoveredRect);
+                    showTooltip(e.clientX + 10, e.clientY + 10, tooltipText);
+                } else if (selectedRects.length > 0) {
+                    const totalSqFeet = selectedRects.reduce((sum, rect) => sum + calculateSquareFeet(rect), 0).toFixed(2);
+                    showTooltip(e.clientX + 10, e.clientY + 10, `Total: ${totalSqFeet} sq ft`);
+                } else {
+                    hideTooltip();
+                }
+            }
+        });
 
         canvas.addEventListener('mouseout', hideTooltip);
     </script>
