@@ -168,6 +168,28 @@
             display: none;
             z-index: 1000;
         }
+        .snap-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin: 10px;
+        }
+        .snap-toggle {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .grid-toggle {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            margin-left: 10px;
+        }
+        .grid-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
     </style>
 </head>
 <body>
@@ -197,6 +219,29 @@
         </div>
         <button onclick="saveAsPNG()">Export to PNG</button>
         <button onclick="saveAsSVG()">Export to SVG</button>
+        <div class="snap-controls">
+            <label>Snap to:</label>
+            <div class="snap-toggle">
+                <input type="checkbox" id="snap-grid" checked>
+                <label for="snap-grid">Grid</label>
+            </div>
+            <div class="snap-toggle">
+                <input type="checkbox" id="snap-corners" checked>
+                <label for="snap-corners">Corners</label>
+            </div>
+            <div class="snap-toggle">
+                <input type="checkbox" id="snap-edges" checked>
+                <label for="snap-edges">Edges</label>
+            </div>
+            <div class="grid-controls">
+                <div class="grid-toggle">
+                    <input type="checkbox" id="show-grid" checked>
+                    <label for="show-grid">Show Grid</label>
+                </div>
+                <input type="color" id="grid-color" value="#CCCCCC" title="Grid Color">
+                <input type="range" id="grid-opacity" min="1" max="100" value="30" title="Grid Opacity">
+            </div>
+        </div>
     </div>
     <canvas id="canvas" width="800" height="600"></canvas>
     <div id="context-menu">
@@ -251,6 +296,34 @@
         let selectionStartY = 0;
         let isSelecting = false;
         const tooltip = document.getElementById('tooltip');
+        const GRID_SIZE = 20; // 20 pixels grid (1 foot)
+        let snapToGrid = true;
+        let snapToCorners = true;
+        let snapToEdges = true;
+        let showGrid = true;
+        let gridColor = '#CCCCCC';
+        let gridOpacity = 0.3;
+
+        // Add event listeners for snap toggles
+        document.getElementById('snap-grid').addEventListener('change', (e) => snapToGrid = e.target.checked);
+        document.getElementById('snap-corners').addEventListener('change', (e) => snapToCorners = e.target.checked);
+        document.getElementById('snap-edges').addEventListener('change', (e) => snapToEdges = e.target.checked);
+
+        // Add event listeners for grid controls
+        document.getElementById('show-grid').addEventListener('change', (e) => {
+            showGrid = e.target.checked;
+            drawAll();
+        });
+        
+        document.getElementById('grid-color').addEventListener('input', (e) => {
+            gridColor = e.target.value;
+            drawAll();
+        });
+        
+        document.getElementById('grid-opacity').addEventListener('input', (e) => {
+            gridOpacity = e.target.value / 100;
+            drawAll();
+        });
 
         function saveAction() {
             actionHistory.push(JSON.stringify(rectangles));
@@ -323,6 +396,9 @@
         function drawAll() {
             updateCanvasSize();
             ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw grid first so it appears behind shapes
+            drawGrid();
             
             rectangles.forEach(rect => {
                 // Draw rectangle with its color
@@ -460,16 +536,29 @@
         }
 
         function getSnapPoints(rect) {
-            return [
-                { x: rect.x, y: rect.y }, // top-left
-                { x: rect.x + rect.width / 2, y: rect.y }, // top-middle
-                { x: rect.x + rect.width, y: rect.y }, // top-right
-                { x: rect.x + rect.width, y: rect.y + rect.height / 2 }, // right-middle
-                { x: rect.x + rect.width, y: rect.y + rect.height }, // bottom-right
-                { x: rect.x + rect.width / 2, y: rect.y + rect.height }, // bottom-middle
-                { x: rect.x, y: rect.y + rect.height }, // bottom-left
-                { x: rect.x, y: rect.y + rect.height / 2 } // left-middle
-            ];
+            const points = [];
+            
+            if (snapToCorners) {
+                // Corner points
+                points.push(
+                    { x: rect.x, y: rect.y }, // top-left
+                    { x: rect.x + rect.width, y: rect.y }, // top-right
+                    { x: rect.x + rect.width, y: rect.y + rect.height }, // bottom-right
+                    { x: rect.x, y: rect.y + rect.height } // bottom-left
+                );
+            }
+            
+            if (snapToEdges) {
+                // Edge midpoints
+                points.push(
+                    { x: rect.x + rect.width / 2, y: rect.y }, // top-middle
+                    { x: rect.x + rect.width, y: rect.y + rect.height / 2 }, // right-middle
+                    { x: rect.x + rect.width / 2, y: rect.y + rect.height }, // bottom-middle
+                    { x: rect.x, y: rect.y + rect.height / 2 } // left-middle
+                );
+            }
+            
+            return points;
         }
 
         function findNearestSnapPoint(rect, otherRects) {
@@ -479,22 +568,40 @@
 
             const movingPoints = getSnapPoints(rect);
             
-            otherRects.forEach(other => {
-                if (other === rect) return;
-                
-                const otherPoints = getSnapPoints(other);
-                
-                movingPoints.forEach(p1 => {
-                    otherPoints.forEach(p2 => {
-                        const dist = Math.hypot(p1.x - p2.x, p1.y - p2.y);
-                        if (dist < SNAP_THRESHOLD && dist < minDist) {
-                            minDist = dist;
-                            snapPoint = p2;
-                            targetPoint = p1;
-                        }
+            // Check snapping to other shapes
+            if (snapToCorners || snapToEdges) {
+                otherRects.forEach(other => {
+                    if (other === rect) return;
+                    
+                    const otherPoints = getSnapPoints(other);
+                    
+                    movingPoints.forEach(p1 => {
+                        otherPoints.forEach(p2 => {
+                            const dist = Math.hypot(p1.x - p2.x, p1.y - p2.y);
+                            if (dist < SNAP_THRESHOLD && dist < minDist) {
+                                minDist = dist;
+                                snapPoint = p2;
+                                targetPoint = p1;
+                            }
+                        });
                     });
                 });
-            });
+            }
+
+            // Check grid snapping
+            if (snapToGrid && (!snapPoint || minDist > SNAP_THRESHOLD/2)) {
+                movingPoints.forEach(p1 => {
+                    const gridX = Math.round(p1.x / GRID_SIZE) * GRID_SIZE;
+                    const gridY = Math.round(p1.y / GRID_SIZE) * GRID_SIZE;
+                    const dist = Math.hypot(p1.x - gridX, p1.y - gridY);
+                    
+                    if (dist < SNAP_THRESHOLD && dist < minDist) {
+                        minDist = dist;
+                        snapPoint = { x: gridX, y: gridY };
+                        targetPoint = p1;
+                    }
+                });
+            }
 
             return { snapPoint, targetPoint };
         }
@@ -923,6 +1030,51 @@
             const heightText = pixelsToFeetInches(rect.height);
             const sqFeet = calculateSquareFeet(rect).toFixed(2);
             return `${rect.label || 'No Label'}<br>${widthText} x ${heightText}<br>${sqFeet} sq ft`;
+        }
+
+        function drawGrid() {
+            if (!showGrid) return;
+            
+            ctx.save();
+            ctx.strokeStyle = gridColor;
+            ctx.globalAlpha = gridOpacity;
+            ctx.lineWidth = 0.5;
+
+            // Draw vertical lines
+            for (let x = 0; x <= canvas.width; x += GRID_SIZE) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
+            }
+
+            // Draw horizontal lines
+            for (let y = 0; y <= canvas.height; y += GRID_SIZE) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+                ctx.stroke();
+            }
+
+            // Draw darker lines for foot markers (every 12 inches / GRID_SIZE)
+            ctx.lineWidth = 1;
+            ctx.globalAlpha = gridOpacity * 2;
+            
+            for (let x = 0; x <= canvas.width; x += GRID_SIZE * 12/20) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
+            }
+
+            for (let y = 0; y <= canvas.height; y += GRID_SIZE * 12/20) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+                ctx.stroke();
+            }
+
+            ctx.restore();
         }
 
         canvas.addEventListener('mousemove', e => {
