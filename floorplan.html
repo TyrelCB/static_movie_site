@@ -191,13 +191,14 @@
             gap: 10px;
         }
         .measurement-line {
-            position: absolute;
+            position: fixed;  /* Change from absolute to fixed */
             border-top: 2px dashed #007bff;
             pointer-events: none;
-            transform-origin: 0 0;
+            transform-origin: 0 50%;  /* Change origin to middle-left */
+            z-index: 1000;
         }
         .measurement-label {
-            position: absolute;
+            position: fixed;  /* Change from absolute to fixed */
             background: rgba(0, 123, 255, 0.9);
             color: white;
             padding: 2px 6px;
@@ -205,6 +206,7 @@
             font-size: 12px;
             pointer-events: none;
             transform: translate(-50%, -100%);
+            z-index: 1000;
         }
     </style>
 </head>
@@ -475,14 +477,21 @@
 
             // Redraw measurement line if active
             if (isMeasuring && measureLine.style.display === 'block') {
+                const canvasRect = canvas.getBoundingClientRect();
+                const lineRect = measureLine.getBoundingClientRect();
+                
                 ctx.save();
                 ctx.setLineDash([5, 5]);
                 ctx.strokeStyle = '#007bff';
                 ctx.beginPath();
                 ctx.moveTo(measureStartX, measureStartY);
-                const rect = measureLine.getBoundingClientRect();
-                const endX = rect.right - canvas.getBoundingClientRect().left;
-                const endY = rect.top - canvas.getBoundingClientRect().top + rect.height/2;
+                
+                // Calculate end point based on line position and rotation
+                const length = parseFloat(measureLine.style.width);
+                const rotation = parseFloat(measureLine.style.transform.replace('rotate(', '').replace('rad)', ''));
+                const endX = measureStartX + length * Math.cos(rotation);
+                const endY = measureStartY + length * Math.sin(rotation);
+                
                 ctx.lineTo(endX, endY);
                 ctx.stroke();
                 ctx.restore();
@@ -692,6 +701,7 @@
                 const rect = canvas.getBoundingClientRect();
                 measureStartX = e.clientX - rect.left;
                 measureStartY = e.clientY - rect.top;
+                updateMeasurementLine(measureStartX, measureStartY); // Initialize line at click point
                 return;
             }
             if (e.button === 2 || isMoving) return; // Ignore right-click or if moving
@@ -1223,53 +1233,238 @@
             canvas.style.cursor = isMeasuring ? 'crosshair' : 'default';
         }
 
-        // Add these functions after existing ones
+        // Replace the updateMeasurementLine function
         function updateMeasurementLine(endX, endY) {
+            const canvasRect = canvas.getBoundingClientRect();
             const dx = endX - measureStartX;
             const dy = endY - measureStartY;
             const length = Math.sqrt(dx * dx + dy * dy);
             const angle = Math.atan2(dy, dx);
 
+            // Convert canvas coordinates to page coordinates
+            const startPageX = measureStartX + canvasRect.left;
+            const startPageY = measureStartY + canvasRect.top;
+
             measureLine.style.width = `${length}px`;
-            measureLine.style.left = `${measureStartX}px`;
-            measureLine.style.top = `${measureStartY}px`;
+            measureLine.style.left = `${startPageX}px`;
+            measureLine.style.top = `${startPageY}px`;
             measureLine.style.transform = `rotate(${angle}rad)`;
             measureLine.style.display = 'block';
 
             // Convert pixels to feet and inches
-            const totalInches = (length * 12) / 20; // Using your scale where 20px = 1 foot
+            const totalInches = (length * 12) / 20;
             const feet = Math.floor(totalInches / 12);
             const inches = Math.round(totalInches % 12);
 
             // Position label at midpoint
-            const midX = measureStartX + dx / 2;
-            const midY = measureStartY + dy / 2;
+            const midPageX = startPageX + dx / 2;
+            const midPageY = startPageY + dy / 2;
             measureLabel.textContent = `${feet}'${inches}"`;
-            measureLabel.style.left = `${midX}px`;
-            measureLabel.style.top = `${midY}px`;
+            measureLabel.style.left = `${midPageX}px`;
+            measureLabel.style.top = `${midPageY}px`;
             measureLabel.style.display = 'block';
         }
 
-        // Modify your existing canvas event listeners
+        // Replace the canvas mousedown event listener for measuring
         canvas.addEventListener('mousedown', e => {
             if (isMeasuring) {
                 const rect = canvas.getBoundingClientRect();
                 measureStartX = e.clientX - rect.left;
                 measureStartY = e.clientY - rect.top;
+                updateMeasurementLine(measureStartX, measureStartY); // Initialize line at click point
                 return;
             }
-            // ...existing mousedown code...
+            if (e.button === 2 || isMoving) return; // Ignore right-click or if moving
+
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            let clickedRect = null;
+            rectangles.forEach(r => {
+                if (isInside(x, y, r)) {
+                    clickedRect = r;
+                }
+            });
+
+            if (clickedRect) {
+                if (e.ctrlKey) {
+                    if (selectedRects.includes(clickedRect)) {
+                        selectedRects = selectedRects.filter(r => r !== clickedRect);
+                    } else {
+                        selectedRects.push(clickedRect);
+                    }
+                } else {
+                    selectedRects = [clickedRect];
+                }
+                selectedRect = clickedRect;
+                isDragging = true;
+                dragOffsetX = x;
+                dragOffsetY = y;
+            } else {
+                selectedRects = [];
+                isSelecting = true;
+                selectionStartX = x;
+                selectionStartY = y;
+                const selectionRectangle = document.getElementById('selection-rectangle');
+                selectionRectangle.style.left = `${rect.left + x}px`;
+                selectionRectangle.style.top = `${rect.top + y}px`;
+                selectionRectangle.style.width = '0px';
+                selectionRectangle.style.height = '0px';
+                selectionRectangle.style.display = 'block';
+            }
+
+            drawAll();
         });
 
-        canvas.addEventListener('mousemove', e => {
+        // Update the drawAll function's measurement drawing part
+        function drawAll() {
+            updateCanvasSize();
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw grid first so it appears behind shapes
+            drawGrid();
+            
+            rectangles.forEach(rect => {
+                // Draw rectangle with its color
+                ctx.fillStyle = rect.color;
+                
+                // Draw rectangle
+                ctx.save();
+                ctx.translate(rect.x + rect.width/2, rect.y + rect.height/2);
+                if (rect.rotation) {
+                    ctx.rotate(rect.rotation * Math.PI / 180);
+                }
+                ctx.fillRect(-rect.width/2, -rect.height/2, rect.width, rect.height);
+                ctx.restore();
+                
+                if (showDimensions) {
+                    // Draw dimension labels
+                    ctx.fillStyle = 'black';
+                    ctx.font = '12px Arial';
+                    
+                    // Width label
+                    const widthText = pixelsToFeetInches(rect.width);
+                    const widthTextWidth = ctx.measureText(widthText).width;
+                    ctx.fillText(widthText, 
+                        rect.x + (rect.width - widthTextWidth) / 2,
+                        rect.y - 5);
+                    
+                    // Height label
+                    const heightText = pixelsToFeetInches(rect.height);
+                    ctx.save();
+                    ctx.translate(rect.x - 5, rect.y + (rect.height + ctx.measureText(heightText).width) / 2);
+                    ctx.rotate(-Math.PI / 2);
+                    ctx.fillText(heightText, 0, 0);
+                    ctx.restore();
+                }
+
+                // Custom label
+                if (rect.label) {
+                    ctx.font = '14px Arial';
+                    const labelWidth = ctx.measureText(rect.label).width;
+                    ctx.fillText(rect.label,
+                        rect.x + (rect.width - labelWidth) / 2,
+                        rect.y + rect.height / 2);
+                }
+
+                // Draw selection border
+                if (selectedRects.includes(rect)) {
+                    ctx.strokeStyle = 'yellow';
+                    ctx.setLineDash([5, 5]);
+                    ctx.strokeRect(rect.x, rect.y, rect.width, rect.height);
+                    ctx.setLineDash([]);
+                }
+            });
+
+            // Redraw measurement line if active
             if (isMeasuring && measureLine.style.display === 'block') {
+                const canvasRect = canvas.getBoundingClientRect();
+                const lineRect = measureLine.getBoundingClientRect();
+                
+                ctx.save();
+                ctx.setLineDash([5, 5]);
+                ctx.strokeStyle = '#007bff';
+                ctx.beginPath();
+                ctx.moveTo(measureStartX, measureStartY);
+                
+                // Calculate end point based on line position and rotation
+                const length = parseFloat(measureLine.style.width);
+                const rotation = parseFloat(measureLine.style.transform.replace('rotate(', '').replace('rad)', ''));
+                const endX = measureStartX + length * Math.cos(rotation);
+                const endY = measureStartY + length * Math.sin(rotation);
+                
+                ctx.lineTo(endX, endY);
+                ctx.stroke();
+                ctx.restore();
+            }
+        }
+
+        canvas.addEventListener('mousemove', e => {
+            if (isDragging && selectedRects.length > 0) {
                 const rect = canvas.getBoundingClientRect();
                 const x = e.clientX - rect.left;
                 const y = e.clientY - rect.top;
-                updateMeasurementLine(x, y);
-                return;
+
+                const deltaX = x - dragOffsetX;
+                const deltaY = y - dragOffsetY;
+
+                selectedRects.forEach(rect => {
+                    rect.x += deltaX;
+                    rect.y += deltaY;
+                });
+
+                dragOffsetX = x;
+                dragOffsetY = y;
+
+                const { snapPoint, targetPoint } = findNearestSnapPoint(selectedRects[0], rectangles);
+                if (snapPoint && targetPoint) {
+                    const snapDeltaX = snapPoint.x - targetPoint.x;
+                    const snapDeltaY = snapPoint.y - targetPoint.y;
+                    selectedRects.forEach(rect => {
+                        rect.x += snapDeltaX;
+                        rect.y += snapDeltaY;
+                    });
+                    showSnapIndicator(snapPoint);
+                } else {
+                    showSnapIndicator(null);
+                }
+
+                drawAll();
+            } else if (isSelecting) {
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+
+                const selectionRectangle = document.getElementById('selection-rectangle');
+                selectionRectangle.style.left = `${rect.left + Math.min(x, selectionStartX)}px`;
+                selectionRectangle.style.top = `${rect.top + Math.min(y, selectionStartY)}px`;
+                selectionRectangle.style.width = `${Math.abs(x - selectionStartX)}px`;
+                selectionRectangle.style.height = `${Math.abs(y - selectionStartY)}px`;
             }
-            // ...existing mousemove code...
+
+            if (!isDragging && !isSelecting) {
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+
+                let hoveredRect = null;
+                rectangles.forEach(r => {
+                    if (isInside(x, y, r)) {
+                        hoveredRect = r;
+                    }
+                });
+
+                if (hoveredRect) {
+                    const tooltipText = formatTooltip(hoveredRect);
+                    showTooltip(e.clientX + 10, e.clientY + 10, tooltipText);
+                } else if (selectedRects.length > 0) {
+                    const totalSqFeet = selectedRects.reduce((sum, rect) => sum + calculateSquareFeet(rect), 0).toFixed(2);
+                    showTooltip(e.clientX + 10, e.clientY + 10, `Total: ${totalSqFeet} sq ft`);
+                } else {
+                    hideTooltip();
+                }
+            }
         });
 
         canvas.addEventListener('mouseup', e => {
@@ -1280,7 +1475,29 @@
                 updateMeasurementLine(endX, endY);
                 return;
             }
-            // ...existing mouseup code...
+            if (isSelecting) {
+                const selectionRectangle = document.getElementById('selection-rectangle');
+                const rect = selectionRectangle.getBoundingClientRect();
+                const canvasRect = canvas.getBoundingClientRect();
+
+                const selectionX = rect.left - canvasRect.left;
+                const selectionY = rect.top - canvasRect.top;
+                const selectionWidth = rect.width;
+                const selectionHeight = rect.height;
+
+                selectedRects = rectangles.filter(r => 
+                    r.x >= selectionX && r.x + r.width <= selectionX + selectionWidth &&
+                    r.y >= selectionY && r.y + r.height <= selectionY + selectionHeight
+                );
+
+                selectionRectangle.style.display = 'none';
+                isSelecting = false;
+                drawAll();
+            } else {
+                isDragging = false;
+                selectedRect = null;
+                showSnapIndicator(null);
+            }
         });
     </script>
 </body>
