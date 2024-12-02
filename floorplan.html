@@ -190,6 +190,22 @@
             align-items: center;
             gap: 10px;
         }
+        .measurement-line {
+            position: absolute;
+            border-top: 2px dashed #007bff;
+            pointer-events: none;
+            transform-origin: 0 0;
+        }
+        .measurement-label {
+            position: absolute;
+            background: rgba(0, 123, 255, 0.9);
+            color: white;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 12px;
+            pointer-events: none;
+            transform: translate(-50%, -100%);
+        }
     </style>
 </head>
 <body>
@@ -242,6 +258,9 @@
                 <input type="range" id="grid-opacity" min="1" max="100" value="30" title="Grid Opacity">
             </div>
         </div>
+        <div class="measurement-group">
+            <button id="measure-tool" onclick="toggleMeasureTool()">Measure Distance</button>
+        </div>
     </div>
     <canvas id="canvas" width="800" height="600"></canvas>
     <div id="context-menu">
@@ -262,6 +281,8 @@
     <div id="snap-indicator" class="snap-indicator"></div>
     <div id="selection-rectangle" class="selection-rectangle" style="display: none;"></div>
     <div id="tooltip" class="tooltip"></div>
+    <div id="measurement-line" class="measurement-line" style="display: none;"></div>
+    <div id="measurement-label" class="measurement-label" style="display: none;"></div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
     <script>
         function toggleTheme() {
@@ -451,6 +472,21 @@
                     ctx.setLineDash([]);
                 }
             });
+
+            // Redraw measurement line if active
+            if (isMeasuring && measureLine.style.display === 'block') {
+                ctx.save();
+                ctx.setLineDash([5, 5]);
+                ctx.strokeStyle = '#007bff';
+                ctx.beginPath();
+                ctx.moveTo(measureStartX, measureStartY);
+                const rect = measureLine.getBoundingClientRect();
+                const endX = rect.right - canvas.getBoundingClientRect().left;
+                const endY = rect.top - canvas.getBoundingClientRect().top + rect.height/2;
+                ctx.lineTo(endX, endY);
+                ctx.stroke();
+                ctx.restore();
+            }
         }
 
         function isInside(x, y, rect) {
@@ -652,6 +688,12 @@
         });
 
         canvas.addEventListener('mousedown', e => {
+            if (isMeasuring) {
+                const rect = canvas.getBoundingClientRect();
+                measureStartX = e.clientX - rect.left;
+                measureStartY = e.clientY - rect.top;
+                return;
+            }
             if (e.button === 2 || isMoving) return; // Ignore right-click or if moving
 
             const rect = canvas.getBoundingClientRect();
@@ -696,6 +738,13 @@
         });
 
         canvas.addEventListener('mousemove', e => {
+            if (isMeasuring && measureLine.style.display === 'block') {
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                updateMeasurementLine(x, y);
+                return;
+            }
             if (isDragging && selectedRects.length > 0) {
                 const rect = canvas.getBoundingClientRect();
                 const x = e.clientX - rect.left;
@@ -762,7 +811,14 @@
             }
         });
 
-        canvas.addEventListener('mouseup', () => {
+        canvas.addEventListener('mouseup', e => {
+            if (isMeasuring) {
+                const rect = canvas.getBoundingClientRect();
+                const endX = e.clientX - rect.left;
+                const endY = e.clientY - rect.top;
+                updateMeasurementLine(endX, endY);
+                return;
+            }
             if (isSelecting) {
                 const selectionRectangle = document.getElementById('selection-rectangle');
                 const rect = selectionRectangle.getBoundingClientRect();
@@ -1145,6 +1201,87 @@
         });
 
         canvas.addEventListener('mouseout', hideTooltip);
+
+        // Add new variables after existing ones
+        let isMeasuring = false;
+        let measureStartX = 0;
+        let measureStartY = 0;
+        let measureLine = document.getElementById('measurement-line');
+        let measureLabel = document.getElementById('measurement-label');
+
+        function toggleMeasureTool() {
+            isMeasuring = !isMeasuring;
+            const button = document.getElementById('measure-tool');
+            button.style.backgroundColor = isMeasuring ? '#dc3545' : '#007bff';
+            button.textContent = isMeasuring ? 'Cancel Measure' : 'Measure Distance';
+            
+            if (!isMeasuring) {
+                measureLine.style.display = 'none';
+                measureLabel.style.display = 'none';
+            }
+            
+            canvas.style.cursor = isMeasuring ? 'crosshair' : 'default';
+        }
+
+        // Add these functions after existing ones
+        function updateMeasurementLine(endX, endY) {
+            const dx = endX - measureStartX;
+            const dy = endY - measureStartY;
+            const length = Math.sqrt(dx * dx + dy * dy);
+            const angle = Math.atan2(dy, dx);
+
+            measureLine.style.width = `${length}px`;
+            measureLine.style.left = `${measureStartX}px`;
+            measureLine.style.top = `${measureStartY}px`;
+            measureLine.style.transform = `rotate(${angle}rad)`;
+            measureLine.style.display = 'block';
+
+            // Convert pixels to feet and inches
+            const totalInches = (length * 12) / 20; // Using your scale where 20px = 1 foot
+            const feet = Math.floor(totalInches / 12);
+            const inches = Math.round(totalInches % 12);
+
+            // Position label at midpoint
+            const midX = measureStartX + dx / 2;
+            const midY = measureStartY + dy / 2;
+            measureLabel.textContent = `${feet}'${inches}"`;
+            measureLabel.style.left = `${midX}px`;
+            measureLabel.style.top = `${midY}px`;
+            measureLabel.style.display = 'block';
+        }
+
+        // Modify your existing canvas event listeners
+        canvas.addEventListener('mousedown', e => {
+            if (isMeasuring) {
+                const rect = canvas.getBoundingClientRect();
+                measureStartX = e.clientX - rect.left;
+                measureStartY = e.clientY - rect.top;
+                return;
+            }
+            // ...existing mousedown code...
+        });
+
+        canvas.addEventListener('mousemove', e => {
+            if (isMeasuring && measureLine.style.display === 'block') {
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                updateMeasurementLine(x, y);
+                return;
+            }
+            // ...existing mousemove code...
+        });
+
+        canvas.addEventListener('mouseup', e => {
+            if (isMeasuring) {
+                const rect = canvas.getBoundingClientRect();
+                const endX = e.clientX - rect.left;
+                const endY = e.clientY - rect.top;
+                updateMeasurementLine(endX, endY);
+                return;
+            }
+            // ...existing mouseup code...
+        });
     </script>
 </body>
 </html>
