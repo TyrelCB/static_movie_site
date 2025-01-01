@@ -658,6 +658,7 @@
             option.textContent = year;
             yearSelect.appendChild(option);
         }
+        yearSelect.appendChild(new Option('All Years', ''));
         // Main function - fetch movie data and save it to an object
         // (async () => {
         //     document.getElementById('filterYear').value = currentYear;
@@ -791,8 +792,8 @@
                 });
             } else {
                 filteredMovies = originalMovies.filter(movie => {
-                    return (!yearFilter || movie.year === yearFilter) &&
-                           (!genreFilter || movie.genres.toLowerCase().includes(genreFilter.toLowerCase())) &&
+                    return (!yearFilter || isNaN(yearFilter) || movie.year === yearFilter) &&
+                           (!genreFilter || (movie.genres && movie.genres.toLowerCase().includes(genreFilter.toLowerCase()))) &&
                            (!ratingFilter || movie.rating >= ratingFilter);
                 });
             }
