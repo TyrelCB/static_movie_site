@@ -71,7 +71,7 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
-    font-size: min(5vw, 2.2em);
+    font-size: min(5vw, 1.5em);
     cursor: pointer;
     transition: all 0.2s ease;
     text-shadow: none; /* Remove existing text shadow */
@@ -682,4 +682,11 @@ body {
 .piece-setting option {
     background: #1a1a2e;
     color: #00ffff;
+}
+
+.fen-text {
+    color: #666;
+    font-size: 0.8em;
+    margin-left: 8px;
+    font-family: monospace;
 }

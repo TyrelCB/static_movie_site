@@ -33,6 +33,34 @@ const PIECE_SETS = {
 
 // Remove the PIECES constant, we'll use PIECE_SETS directly
 
+// Add the fetchCloudEval function before the Chess class
+async function fetchCloudEval(fen) {
+    /**
+     * Fetches cloud evaluation data for the given FEN string from Lichess API.
+     * 
+     * @param {string} fen - FEN string representing the chess position.
+     * @returns {Object} - Parsed JSON response from the API or error message.
+     */
+    // Define Lichess Cloud Evaluation API endpoint
+    const API_URL = "https://lichess.org/api/cloud-eval";
+    try {
+        // Perform GET request to Lichess API
+        const response = await fetch(`${API_URL}?fen=${encodeURIComponent(fen)}&multiPv=3`);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+
+        // Parse JSON response
+        const data = await response.json();
+        const suggestedMove = data.pvs[0]?.moves?.split(" ")[0];
+        console.log(`Suggested Move (UCI): ${suggestedMove || "N/A"}`);
+        return suggestedMove;
+    } catch (error) {
+        return { error: error.message };
+    }
+}
+
 class Chess {
     constructor() {
         this.board = Array(8).fill().map(() => Array(8).fill(null));
@@ -81,8 +109,14 @@ class Chess {
             moveTextSpan.className = 'move-text';
             moveTextSpan.textContent = moveNotation;
 
+            // Add FEN after the move notation
+            const fenSpan = document.createElement('span');
+            fenSpan.className = 'fen-text';
+            fenSpan.textContent = ` (${this.generateFEN()})`;
+
             logEntry.appendChild(moveNumberSpan);
             logEntry.appendChild(moveTextSpan);
+            logEntry.appendChild(fenSpan);
 
             this.moveNotation.push(moveNotation);
         } else {
@@ -92,6 +126,84 @@ class Chess {
         const gameLog = document.getElementById('game-log');
         gameLog.appendChild(logEntry);
         gameLog.scrollTop = gameLog.scrollHeight;
+    }
+
+    generateFEN() {
+        let fen = '';
+        let emptySquares = 0;
+
+        // Board position
+        for (let row = 0; row < 8; row++) {
+            if (row > 0) fen += '/';
+            for (let col = 0; col < 8; col++) {
+                const piece = this.board[row][col];
+                if (piece === null) {
+                    emptySquares++;
+                } else {
+                    if (emptySquares > 0) {
+                        fen += emptySquares;
+                        emptySquares = 0;
+                    }
+                    const pieceSymbol = this.getFENPieceSymbol(piece);
+                    fen += pieceSymbol;
+                }
+            }
+            if (emptySquares > 0) {
+                fen += emptySquares;
+                emptySquares = 0;
+            }
+        }
+
+        // Active color
+        fen += ` ${this.currentPlayer[0].toLowerCase()}`;
+
+        // Castling availability
+        let castling = '';
+        if (this.hasCastlingRights('WHITE', 'kingside')) castling += 'K';
+        if (this.hasCastlingRights('WHITE', 'queenside')) castling += 'Q';
+        if (this.hasCastlingRights('BLACK', 'kingside')) castling += 'k';
+        if (this.hasCastlingRights('BLACK', 'queenside')) castling += 'q';
+        fen += ` ${castling || '-'}`;
+
+        // En passant target square
+        const enPassant = this.lastPawnDoubleMove ? 
+            this.getSquareNotation(this.lastPawnDoubleMove.row, this.lastPawnDoubleMove.col) : 
+            '-';
+        fen += ` ${enPassant}`;
+
+        // Halfmove clock (not implemented, always 0)
+        fen += ' 0';
+
+        // Fullmove number
+        fen += ` ${this.moveCounter}`;
+
+        return fen;
+    }
+
+    getFENPieceSymbol(piece) {
+        const symbols = {
+            'KING': 'k',
+            'QUEEN': 'q',
+            'ROOK': 'r',
+            'BISHOP': 'b',
+            'KNIGHT': 'n',
+            'PAWN': 'p'
+        };
+        return piece.color === 'WHITE' ? 
+            symbols[piece.type].toUpperCase() : 
+            symbols[piece.type];
+    }
+
+    hasCastlingRights(color, side) {
+        const row = color === 'WHITE' ? 7 : 0;
+        const kingCol = 4;
+        const rookCol = side === 'kingside' ? 7 : 0;
+
+        const king = this.board[row][kingCol];
+        const rook = this.board[row][rookCol];
+
+        return king && king.type === 'KING' && !king.hasMoved &&
+               rook && rook.type === 'ROOK' && !rook.hasMoved;
     }
 
     setupBoard() {
@@ -895,7 +1007,7 @@ class Chess {
 
         // First pass: collect all valid moves and their scores
         for (let startRow = 0; startRow < 8; startRow++) {
-            for (let startCol = 0; startCol < 8; startCol++) {
+            for (let startCol = 0; startCol < 8; startCol++ ) {
                 const piece = this.board[startRow][startCol];
                 if (!piece || piece.color !== 'BLACK') continue;
 
