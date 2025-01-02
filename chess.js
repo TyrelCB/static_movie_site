@@ -45,7 +45,7 @@ async function fetchCloudEval(fen) {
     const API_URL = "https://lichess.org/api/cloud-eval";
     try {
         // Perform GET request to Lichess API
-        const response = await fetch(`${API_URL}?fen=${encodeURIComponent(fen)}&multiPv=3`);
+        const response = await fetch(`${API_URL}?fen=${encodeURIComponent(fen)}&multiPv=1`);
         
         if (!response.ok) {
             throw new Error(`HTTP error! Status: ${response.status}`);
@@ -578,7 +578,7 @@ class Chess {
         return true;
     }
 
-    afterMove(piece) {
+    async afterMove(piece) {
         const previousPlayer = this.currentPlayer;
         this.currentPlayer = this.currentPlayer === 'WHITE' ? 'BLACK' : 'WHITE';
         this.computeAllValidMoves(); // Compute valid moves for next player
@@ -587,6 +587,19 @@ class Chess {
         this.halfMoveCounter++;
         if (this.currentPlayer === 'WHITE') {
             this.moveCounter++;
+        }
+
+        // Get cloud evaluation for the position
+        const fen = this.generateFEN();
+        try {
+            const suggestedMove = await fetchCloudEval(fen);
+            if (suggestedMove && !suggestedMove.error) {
+                console.log(`Cloud suggests: ${suggestedMove}`);
+                const aiScoreElement = document.getElementById('ai-score');
+                aiScoreElement.textContent += ` (Cloud: ${suggestedMove})`;
+            }
+        } catch (error) {
+            console.log('Cloud evaluation failed:', error);
         }
 
         // Update turn display
