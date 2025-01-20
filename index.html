@@ -498,7 +498,8 @@
     <div class="filter-form">
         <div class="filter-container">
             <label for="filterTitle">Title</label>
-            <input  id="filterTitle" placeholder="Title" list="titleSuggestions" oninput="resetPagination(); filterMovies(); showSuggestions(this.value)">
+            <input id="filterTitle" placeholder="Title" list="titleSuggestions" 
+                   oninput="clearCastFilter(); resetPagination(); filterMovies(); showSuggestions(this.value)">
             <datalist id="titleSuggestions"></datalist>
         </div>
         <div class="filter-container">
@@ -542,7 +543,8 @@
         </div>
         <div class="filter-container">
             <label for="filterCast">Cast</label>
-            <input id="filterCast" placeholder="Actor name" list="castSuggestions" oninput="resetPagination(); filterMovies(); showCastSuggestions(this.value)">
+            <input id="filterCast" placeholder="Actor name" list="castSuggestions" 
+                   oninput="clearTitleFilter(); resetPagination(); filterMovies(); showCastSuggestions(this.value)">
             <datalist id="castSuggestions"></datalist>
         </div>
     </div>
@@ -592,6 +594,10 @@
         
         function clearTitleFilter() {
             document.getElementById('filterTitle').value = '';
+        }
+
+        function clearCastFilter() {
+            document.getElementById('filterCast').value = '';
         }
 
         window.addEventListener('resize', updateViewDimensions);
