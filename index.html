@@ -63,6 +63,36 @@
             // Sort movies by date uploaded by default
             originalMovies.sort((a, b) => new Date(b.date_uploaded) - new Date(a.date_uploaded));
             
+            // Populate missing actors, rated, and plot data asynchronously with rate limiting
+            (async () => {
+                const rateLimit = 300; // requests per minute
+                const delay = (60 * 1000) / rateLimit; // delay between requests in ms
+                
+                const movieDataPromises = originalMovies
+                    .filter(movie => !movie.actors || !movie.plot || !movie.rated)
+                    .map((movie, index) => 
+                        new Promise(resolve => {
+                            setTimeout(() => {
+                                fetchMovieData(movie.imdb_id)
+                                    .then(movieData => {
+                                        if (movieData) {
+                                            movie.actors = movieData.actors;
+                                            movie.plot = movieData.plot;
+                                            movie.rated = movieData.rated;
+                                        }
+                                        resolve();
+                                    })
+                                    .catch(error => {
+                                        console.error(`Error fetching data for movie ${movie.title}:`, error);
+                                        resolve();
+                                    });
+                            }, index * delay);
+                        })
+                    );
+                
+                Promise.allSettled(movieDataPromises);
+            })();
+
             // Generate HTML content
             generateMoviePage({ movies });
             lazyLoad();
