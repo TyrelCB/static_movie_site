@@ -504,13 +504,13 @@
         </div>
         <div class="filter-container">
             <label for="filterYear">Year</label>
-            <select id="filterYear" onchange="clearTitleFilter(); resetPagination();  filterMovies();">
+            <select id="filterYear" onchange="clearCastFilter; clearTitleFilter(); resetPagination();  filterMovies();">
 
             </select>
         </div>
         <div class="filter-container">
             <label for="filterGenre">Genre</label>
-            <select id="filterGenre" onchange="clearTitleFilter(); resetPagination();  filterMovies()">
+            <select id="filterGenre" onchange="clearCastFilter; clearTitleFilter(); resetPagination();  filterMovies()">
                 <option value="">All Genres</option>
                 <option value="action">Action</option>
                 <option value="comedy">Comedy</option>
