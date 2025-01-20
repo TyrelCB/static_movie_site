@@ -873,6 +873,18 @@
             lazyLoad();
         }
 
+        // Add this new function before showModal function:
+        function selectActor(actorName) {
+            // Close the modal
+            closeModal();
+            // Set the cast filter to the clicked actor's name
+            const filterCast = document.getElementById('filterCast');
+            filterCast.value = actorName;
+            // Reset pagination and filter movies
+            resetPagination();
+            filterMovies();
+        }
+
         // Function to show modal with movie details
         async function showModal(movie) {
             console.log('Executing showModal function for movie:', movie);
@@ -900,7 +912,13 @@
             <a href="${movie.torrent}" target="_blank" style="display: block; text-align: center; color: #ff007f; text-decoration: none; font-size: 1.2rem; font-weight: bold; background-color: #1b0034; padding: 10px 20px; border-radius: 10px; box-shadow: 0 0 10px #ff007f; transition: background-color 0.3s, box-shadow 0.3s;">Download Torrent</a>
             <p><strong>Rating:</strong> ${movie.rating}</p>
             <p><strong>Genres:</strong> ${movie.genres}</p>
-            <p><strong>Actors:</strong> ${movie.actors || 'N/A'}</p>
+            <p><strong>Actors:</strong> ${
+                movie.actors ? 
+                movie.actors.split(', ').map(actor => 
+                    `<a href="#" onclick="selectActor('${actor}'); return false;" style="color: #00ff00; text-decoration: none; margin: 0 5px; border-bottom: 1px solid #00ff00;">${actor}</a>`
+                ).join(', ') : 
+                'N/A'
+            }</p>
             <p><strong>Plot:</strong> ${plot}</p>
             <p><strong>Rated:</strong> ${movie.rated || 'N/A'}</p>
             <div style="margin-top: 20px;">
