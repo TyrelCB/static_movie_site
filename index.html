@@ -26,8 +26,8 @@
     async function loadMoviesData() {
         try {
             document.getElementById('loadingModal').style.display = 'flex';
-            let url = 'movies.json'
-            // let url = 'https://tyrelcb.github.io/static_movie_site/movies.json'
+            // let url = 'movies.json'
+            let url = 'https://tyrelcb.github.io/static_movie_site/movies.json'
             const response = await fetch(url);
             if (!response.ok) {
                 throw new Error('Failed to load movies.json');
@@ -217,6 +217,7 @@
             max-width: 300px;
             margin-top: 5px;
             z-index: 100;
+            border-radius: 5px;
         }
         .suggestion-item {
             padding: 10px;
@@ -539,6 +540,11 @@
                 <option value="title">Sort by Title</option>
             </select>
         </div>
+        <div class="filter-container">
+            <label for="filterCast">Cast</label>
+            <input id="filterCast" placeholder="Actor name" list="castSuggestions" oninput="resetPagination(); filterMovies(); showCastSuggestions(this.value)">
+            <datalist id="castSuggestions"></datalist>
+        </div>
     </div>
     <div id="loadingModal" class="modal">
         <div class="modal-content" style="text-align: center;">
@@ -818,22 +824,30 @@
             const yearFilter = parseInt(document.getElementById('filterYear').value);
             const genreFilter = document.getElementById('filterGenre').value;
             const ratingFilter = parseFloat(document.getElementById('filterRating').value);
+            const castFilter = document.getElementById('filterCast').value.trim().toLowerCase();
             const sortField = document.getElementById('sortField').value;
         
             let filteredMovies;
         
-            if (titleFilter) {
+            if (castFilter) {
+                // If cast filter is active, only filter by cast
+                filteredMovies = originalMovies.filter(movie => {
+                    return movie.actors && movie.actors.toLowerCase().includes(castFilter);
+                });
+            } else if (titleFilter) {
+                // If title filter is active
                 filteredMovies = originalMovies.filter(movie => {
                     return movie.title.toLowerCase().includes(titleFilter);
                 });
             } else {
+                // If neither cast nor title filter is active, use other filters
                 filteredMovies = originalMovies.filter(movie => {
                     return (!yearFilter || isNaN(yearFilter) || movie.year === yearFilter) &&
                            (!genreFilter || (movie.genres && movie.genres.toLowerCase().includes(genreFilter.toLowerCase()))) &&
                            (!ratingFilter || movie.rating >= ratingFilter);
                 });
             }
-        
+
             // Sort the filtered movies based on the selected sort field
             filteredMovies.sort((a, b) => {
                 if (sortField === 'date_uploaded') {
@@ -980,6 +994,30 @@
             }
             return null;
         }
+
+        function showCastSuggestions(input) {
+            const datalist = document.getElementById('castSuggestions');
+            datalist.innerHTML = '';
+            if (input.length < 2) return;
+            
+            const castMembers = new Set();
+            originalMovies.forEach(movie => {
+                if (movie.actors) {
+                    movie.actors.split(', ').forEach(actor => {
+                        if (actor.toLowerCase().includes(input.toLowerCase())) {
+                            castMembers.add(actor);
+                        }
+                    });
+                }
+            });
+            
+            Array.from(castMembers).slice(0, 5).forEach(actor => {
+                const option = document.createElement('option');
+                option.value = actor;
+                datalist.appendChild(option);
+            });
+        }
+
     </script>
     
 </body>
