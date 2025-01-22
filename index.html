@@ -22,6 +22,37 @@
             checkForNewMovies();
         }
     }, 100);
+
+    // Add this function before loadMoviesData
+    const fetchMissingMovieData = async (moviesToUpdate) => {
+        const rateLimit = 300; // requests per minute
+        const delay = (60 * 1000) / rateLimit; // delay between requests in ms
+        
+        const movieDataPromises = moviesToUpdate
+            .filter(movie => !movie.actors || !movie.plot || !movie.rated)
+            .map((movie, index) => 
+                new Promise(resolve => {
+                    setTimeout(() => {
+                        fetchMovieData(movie.imdb_id)
+                            .then(movieData => {
+                                if (movieData) {
+                                    movie.actors = movieData.actors;
+                                    movie.plot = movieData.plot;
+                                    movie.rated = movieData.rated;
+                                }
+                                resolve();
+                            })
+                            .catch(error => {
+                                console.error(`Error fetching data for movie ${movie.title}:`, error);
+                                resolve();
+                            });
+                    }, index * delay);
+                })
+            );
+        
+        await Promise.allSettled(movieDataPromises);
+    };
+
     // Load movie data from JSON file if available, otherwise use fetch API
     async function loadMoviesData() {
         try {
@@ -35,8 +66,7 @@
             const moviesObject = await response.json();
             if (moviesObject && moviesObject.movies) {
                 originalMovies = moviesObject.movies;
-                // document.getElementById('filterYear').value = currentYear;
-                document.getElementById('filterYear').value = 'All Years';
+                document.getElementById('filterYear').value = "All Years"; // or currentYear
                 console.log('Movies loaded from JSON file:', moviesObject);
                 resetPagination();
                 filterMovies();
@@ -47,8 +77,7 @@
         } catch (error) {
             console.error('Error loading movies.json:', error);
             // If loading from JSON fails, fetch movies using the API
-            // document.getElementById('filterYear').value = currentYear;
-            document.getElementById('filterYear').value = 'All Years';
+            document.getElementById('filterYear').value = "All Years";
             document.getElementById('loadingModal').style.display = 'flex';
             const startTime = performance.now();
             const movies = await processMovies();
@@ -67,34 +96,6 @@
             
             // Initially populate missing data for existing movies
             // Populate missing actors, rated, and plot data asynchronously with rate limiting
-            const fetchMissingMovieData = async (moviesToUpdate) => {
-                const rateLimit = 300; // requests per minute
-                const delay = (60 * 1000) / rateLimit; // delay between requests in ms
-                
-                const movieDataPromises = moviesToUpdate
-                    .filter(movie => !movie.actors || !movie.plot || !movie.rated)
-                    .map((movie, index) => 
-                        new Promise(resolve => {
-                            setTimeout(() => {
-                                fetchMovieData(movie.imdb_id)
-                                    .then(movieData => {
-                                        if (movieData) {
-                                            movie.actors = movieData.actors;
-                                            movie.plot = movieData.plot;
-                                            movie.rated = movieData.rated;
-                                        }
-                                        resolve();
-                                    })
-                                    .catch(error => {
-                                        console.error(`Error fetching data for movie ${movie.title}:`, error);
-                                        resolve();
-                                    });
-                            }, index * delay);
-                        })
-                    );
-                
-                await Promise.allSettled(movieDataPromises);
-            };
 
             // Call it initially for all movies
             fetchMissingMovieData(originalMovies);
